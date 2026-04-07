@@ -26,7 +26,34 @@
     .page-header {
       text-align: center;
       margin-bottom: 2rem;
+      position: relative;
     }
+
+    .default-fmt-btn {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.7rem;
+      background: #13131a;
+      border: 1px solid #1e1e2a;
+      border-radius: 8px;
+      color: #6b6b80;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+      user-select: none;
+    }
+
+    .default-fmt-btn:hover { color: #3ecfb2; border-color: #3ecfb2; }
+
+    .default-fmt-icon { font-size: 0.9rem; }
 
     .page-header h1 {
       font-size: 1.4rem;
@@ -381,6 +408,10 @@
 <body>
 
   <div class="page-header">
+    <div class="default-fmt-btn" onclick="cycleDefaultFormat()" title="Change default format">
+      <span class="default-fmt-icon">♪</span>
+      <span id="default-fmt-label">MP3</span>
+    </div>
     <h1>Audio Downloader</h1>
     <p>Download YouTube audio in parallel — MP3 or AAC</p>
   </div>
@@ -397,6 +428,12 @@
   <script>
     let tabCount = 0;
     let activeTab = null;
+    let defaultFormat = 'mp3';
+
+    function cycleDefaultFormat() {
+      defaultFormat = defaultFormat === 'mp3' ? 'aac' : 'mp3';
+      document.getElementById('default-fmt-label').textContent = defaultFormat.toUpperCase();
+    }
 
     function extractVideoId(url) {
       try {
@@ -441,7 +478,7 @@
       const panel = document.createElement('div');
       panel.className = 'panel';
       panel.id = `panel-${id}`;
-      panel.dataset.format = 'mp3';
+      panel.dataset.format = defaultFormat;
       panel.dataset.debounce = '';
       panel.innerHTML = `
         <div class="input-row">
@@ -461,8 +498,8 @@
 
         <div class="panel-footer">
           <div class="format-toggle">
-            <button class="fmt-btn active" data-fmt="mp3" onclick="selectFormat(${id}, this)">MP3</button>
-            <button class="fmt-btn"        data-fmt="aac" onclick="selectFormat(${id}, this)">AAC</button>
+            <button class="fmt-btn ${defaultFormat === 'mp3' ? 'active' : ''}" data-fmt="mp3" onclick="selectFormat(${id}, this)">MP3</button>
+            <button class="fmt-btn ${defaultFormat === 'aac' ? 'active' : ''}" data-fmt="aac" onclick="selectFormat(${id}, this)">AAC</button>
           </div>
           <button class="dl-btn" id="dl-${id}" onclick="startDownload(${id})">Download</button>
         </div>
