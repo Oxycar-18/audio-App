@@ -12,39 +12,45 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// POST /download — streams MP3 directly to the client
-app.post('/download', (req, res) => {
-  const { url } = req.body;
+const FORMATS = {
+  mp3: { mimeType: 'audio/mpeg',  ext: 'mp3' },
+  aac: { mimeType: 'audio/aac',   ext: 'aac' },
+};
 
-  if (!url || !url.includes('youtube.com') && !url.includes('youtu.be')) {
+// POST /download — streams audio directly to the client
+app.post('/download', (req, res) => {
+  const { url, format = 'mp3' } = req.body;
+
+  if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
     return res.status(400).json({ error: 'Invalid YouTube URL' });
   }
 
-  // Use yt-dlp to extract audio and pipe it as MP3
+  const fmt = FORMATS[format] || FORMATS.mp3;
+
   const ytDlp = spawn(YTDLP_PATH, [
     '--no-playlist',
-    '-x',                        // extract audio
-    '--audio-format', 'mp3',
-    '--audio-quality', '0',      // best quality
+    '-x',
+    '--audio-format', fmt.ext,
+    '--audio-quality', '0',
     '--ffmpeg-location', FFMPEG_PATH,
-    '-o', '-',                   // output to stdout
+    '-o', '-',
     url
   ]);
 
-  let filename = 'audio.mp3';
+  let filename = `audio.${fmt.ext}`;
 
-  // Try to get the video title for the filename first
+  // Fetch title first, then stream
   const titleProc = spawn(YTDLP_PATH, ['--get-title', '--no-playlist', url]);
   let title = '';
   titleProc.stdout.on('data', (d) => { title += d.toString().trim(); });
+
   titleProc.on('close', () => {
     if (title) {
-      // Sanitize title for use as filename
-      filename = title.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_') + '.mp3';
+      filename = title.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_') + `.${fmt.ext}`;
     }
 
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Type', fmt.mimeType);
 
     ytDlp.stdout.pipe(res);
 
@@ -65,9 +71,8 @@ app.post('/download', (req, res) => {
   });
 
   titleProc.on('error', () => {
-    // If title fetch fails, just proceed with default filename
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Type', fmt.mimeType);
     ytDlp.stdout.pipe(res);
   });
 });

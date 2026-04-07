@@ -79,6 +79,29 @@
     button:hover:not(:disabled) { background: #e03333; }
     button:disabled { background: #555; cursor: not-allowed; }
 
+    .format-toggle {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.4rem;
+    }
+
+    .fmt-btn {
+      margin-top: 0;
+      flex: 1;
+      padding: 0.55rem;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #aaa;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .fmt-btn:hover { border-color: #ff4444; color: #f1f1f1; }
+    .fmt-btn.active { background: #ff4444; border-color: #ff4444; color: #fff; }
+
     #status {
       margin-top: 1rem;
       font-size: 0.875rem;
@@ -93,8 +116,8 @@
 </head>
 <body>
   <div class="card">
-    <h1>YTB MP3 Downloader</h1>
-    <p class="subtitle">Paste a YouTube link and download the audio as MP3.</p>
+    <h1>YTB Audio Downloader</h1>
+    <p class="subtitle">Paste a YouTube link and download the audio.</p>
 
     <label for="urlInput">YouTube URL</label>
     <input
@@ -104,12 +127,26 @@
       autocomplete="off"
     />
 
-    <button id="downloadBtn" onclick="downloadMp3()">Download MP3</button>
+    <label style="margin-top: 1rem;">Format</label>
+    <div class="format-toggle">
+      <button type="button" class="fmt-btn active" data-fmt="mp3" onclick="selectFormat(this)">MP3</button>
+      <button type="button" class="fmt-btn" data-fmt="aac" onclick="selectFormat(this)">AAC</button>
+    </div>
+
+    <button id="downloadBtn" onclick="startDownload()">Download</button>
     <div id="status"></div>
   </div>
 
   <script>
-    async function downloadMp3() {
+    let selectedFormat = 'mp3';
+
+    function selectFormat(btn) {
+      document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedFormat = btn.dataset.fmt;
+    }
+
+    async function startDownload() {
       const url = document.getElementById('urlInput').value.trim();
       const status = document.getElementById('status');
       const btn = document.getElementById('downloadBtn');
@@ -126,7 +163,7 @@
         const res = await fetch('/download', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url })
+          body: JSON.stringify({ url, format: selectedFormat })
         });
 
         if (!res.ok) {
@@ -134,10 +171,9 @@
           throw new Error(err.error || 'Download failed');
         }
 
-        // Extract filename from Content-Disposition header
         const disposition = res.headers.get('Content-Disposition') || '';
         const match = disposition.match(/filename="(.+?)"/);
-        const filename = match ? match[1] : 'audio.mp3';
+        const filename = match ? match[1] : `audio.${selectedFormat}`;
 
         const blob = await res.blob();
         const a = document.createElement('a');
@@ -160,9 +196,8 @@
       el.className = `status-${type}`;
     }
 
-    // Allow pressing Enter to trigger download
     document.getElementById('urlInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') downloadMp3();
+      if (e.key === 'Enter') startDownload();
     });
   </script>
 </body>
