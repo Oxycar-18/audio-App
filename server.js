@@ -2,8 +2,10 @@ const express = require('express');
 const { spawn } = require('child_process');
 const path = require('path');
 
-const YTDLP_PATH = 'C:\\Users\\arthur.bignier\\KIRO\\Sources\\yt-dlp.exe';
-const FFMPEG_PATH = 'ffmpeg'; // replace with full path to ffmpeg.exe when available
+// Configure via environment variables, or fall back to names on PATH.
+// On a new machine, set YTDLP_PATH and FFMPEG_PATH, or add both to your system PATH.
+const YTDLP_PATH  = process.env.YTDLP_PATH  || 'yt-dlp';
+const FFMPEG_PATH = process.env.FFMPEG_PATH || 'ffmpeg';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
