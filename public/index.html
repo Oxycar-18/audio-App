@@ -3,21 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>YTB Audio Downloader</title>
+  <title>Audio Downloader</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
-    /* ── palette ───────────────────────────────────────────
-       bg:      #0a0a0f  (near-black, slight blue tint)
-       surface: #13131a
-       border:  #1e1e2a
-       accent:  #5b8dee  (soft periwinkle blue)
-       accent2: #3ecfb2  (muted teal — used for active states)
-       text:    #d4d4e0
-       muted:   #6b6b80
-    ─────────────────────────────────────────────────────── */
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -25,150 +15,128 @@
       font-weight: 400;
       background: #0a0a0f;
       color: #d4d4e0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1rem 4rem;
     }
 
-    .card {
-      background: #13131a;
-      border: 1px solid #1e1e2a;
-      border-radius: 16px;
-      padding: 2.5rem;
-      width: 100%;
-      max-width: 480px;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    /* ── page header ── */
+    .page-header {
+      text-align: center;
+      margin-bottom: 2.5rem;
     }
 
-    h1 {
-      font-size: 1.35rem;
+    .page-header h1 {
+      font-size: 1.5rem;
       font-weight: 600;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
       color: #e8e8f0;
       margin-bottom: 0.3rem;
     }
 
-    p.subtitle {
+    .page-header p {
       font-size: 0.82rem;
       font-weight: 300;
       color: #6b6b80;
-      margin-bottom: 2rem;
-      letter-spacing: 0.01em;
     }
 
-    label {
-      display: block;
-      font-size: 0.75rem;
-      font-weight: 500;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: #6b6b80;
-      margin-bottom: 0.45rem;
+    /* ── capsule list ── */
+    #capsule-list {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* ── single capsule ── */
+    .capsule {
+      background: #13131a;
+      border: 1px solid #1e1e2a;
+      border-radius: 16px;
+      padding: 1.4rem 1.5rem 1.2rem;
+      position: relative;
+      transition: border-color 0.2s;
+    }
+
+    .capsule.downloading { border-color: #5b8dee44; }
+    .capsule.done        { border-color: #3ecfb244; }
+    .capsule.error-state { border-color: #e0707044; }
+
+    /* remove button */
+    .capsule-remove {
+      position: absolute;
+      top: 0.9rem;
+      right: 0.9rem;
+      background: none;
+      border: none;
+      color: #3a3a50;
+      font-size: 1rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0.1rem 0.3rem;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+      margin: 0;
+      width: auto;
+    }
+
+    .capsule-remove:hover { color: #e07070; background: rgba(224,112,112,0.08); }
+
+    /* input row */
+    .input-row {
+      display: flex;
+      gap: 0.45rem;
+      margin-bottom: 0;
     }
 
     input[type="text"] {
-      width: 100%;
-      padding: 0.72rem 1rem;
+      flex: 1;
+      padding: 0.65rem 0.9rem;
       background: #0a0a0f;
       border: 1px solid #1e1e2a;
       border-radius: 10px;
       color: #d4d4e0;
       font-family: 'Inter', sans-serif;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
 
     input[type="text"]::placeholder { color: #3a3a50; }
-
     input[type="text"]:focus {
       border-color: #5b8dee;
-      box-shadow: 0 0 0 3px rgba(91,141,238,0.12);
+      box-shadow: 0 0 0 3px rgba(91,141,238,0.1);
     }
-
-    .input-row {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .input-row input { flex: 1; }
 
     .paste-btn {
-      margin-top: 0;
-      width: auto;
-      padding: 0 0.85rem;
+      padding: 0 0.8rem;
       background: #0a0a0f;
       border: 1px solid #1e1e2a;
       border-radius: 10px;
-      font-size: 1rem;
+      font-size: 0.95rem;
       cursor: pointer;
       color: #6b6b80;
       transition: border-color 0.2s, color 0.2s;
+      margin: 0;
+      width: auto;
     }
 
     .paste-btn:hover { border-color: #5b8dee; color: #5b8dee; background: #0a0a0f; }
 
-    /* main download button */
-    button#downloadBtn {
-      margin-top: 1.4rem;
-      width: 100%;
-      padding: 0.82rem;
-      background: #5b8dee;
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.95rem;
-      font-weight: 500;
-      letter-spacing: 0.02em;
-      cursor: pointer;
-      transition: background 0.2s, box-shadow 0.2s;
-    }
-
-    button#downloadBtn:hover:not(:disabled) {
-      background: #4a7de0;
-      box-shadow: 0 4px 16px rgba(91,141,238,0.25);
-    }
-
-    button#downloadBtn:disabled { background: #1e1e2a; color: #3a3a50; cursor: not-allowed; }
-
-    /* format toggle */
-    .format-toggle {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: 0.45rem;
-    }
-
-    .fmt-btn {
-      margin-top: 0;
-      flex: 1;
-      padding: 0.52rem;
-      background: #0a0a0f;
-      border: 1px solid #1e1e2a;
-      border-radius: 10px;
-      color: #6b6b80;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.82rem;
-      font-weight: 500;
-      letter-spacing: 0.04em;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .fmt-btn:hover { border-color: #3ecfb2; color: #3ecfb2; }
-    .fmt-btn.active { background: rgba(62,207,178,0.1); border-color: #3ecfb2; color: #3ecfb2; }
-
-    /* preview */
+    /* thumbnail preview */
     .preview {
-      margin-top: 1.3rem;
+      margin-top: 0.9rem;
       border-radius: 10px;
       overflow: hidden;
       border: 1px solid #1e1e2a;
       background: #0a0a0f;
+      display: none;
     }
 
-    .preview.hidden { display: none; }
+    .preview.visible { display: block; }
 
     .preview img {
       width: 100%;
@@ -177,71 +145,121 @@
       object-fit: cover;
     }
 
-    .preview-info { padding: 0.6rem 0.85rem; }
+    .preview-info { padding: 0.5rem 0.8rem; }
 
     .preview-title {
-      font-size: 0.82rem;
-      font-weight: 400;
+      font-size: 0.8rem;
       color: #9090a8;
       display: -webkit-box;
-      -webkit-line-clamp: 2;
+      -webkit-line-clamp: 1;
       -webkit-box-orient: vertical;
       overflow: hidden;
       line-height: 1.4;
     }
 
-    /* status */
-    #status {
-      margin-top: 1rem;
-      font-size: 0.82rem;
-      font-weight: 400;
-      min-height: 1.2rem;
-      text-align: center;
-      letter-spacing: 0.01em;
+    /* bottom row: format + download */
+    .capsule-footer {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.9rem;
+      align-items: center;
     }
 
-    .status-loading { color: #8899cc; }
-    .status-error   { color: #e07070; }
-    .status-success { color: #3ecfb2; }
+    .format-toggle {
+      display: flex;
+      gap: 0.35rem;
+    }
+
+    .fmt-btn {
+      padding: 0.45rem 0.75rem;
+      background: #0a0a0f;
+      border: 1px solid #1e1e2a;
+      border-radius: 8px;
+      color: #6b6b80;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin: 0;
+      width: auto;
+    }
+
+    .fmt-btn:hover { border-color: #3ecfb2; color: #3ecfb2; }
+    .fmt-btn.active { background: rgba(62,207,178,0.1); border-color: #3ecfb2; color: #3ecfb2; }
+
+    .dl-btn {
+      flex: 1;
+      padding: 0.52rem 1rem;
+      background: #5b8dee;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      margin: 0;
+      width: auto;
+    }
+
+    .dl-btn:hover:not(:disabled) {
+      background: #4a7de0;
+      box-shadow: 0 4px 14px rgba(91,141,238,0.25);
+    }
+
+    .dl-btn:disabled { background: #1e1e2a; color: #3a3a50; cursor: not-allowed; }
+    .dl-btn.done     { background: rgba(62,207,178,0.15); color: #3ecfb2; border: 1px solid #3ecfb244; }
+    .dl-btn.errored  { background: rgba(224,112,112,0.12); color: #e07070; border: 1px solid #e0707044; }
+
+    /* status line */
+    .capsule-status {
+      margin-top: 0.55rem;
+      font-size: 0.76rem;
+      min-height: 1rem;
+      letter-spacing: 0.01em;
+      padding-left: 0.1rem;
+    }
+
+    .capsule-status.loading { color: #8899cc; }
+    .capsule-status.success { color: #3ecfb2; }
+    .capsule-status.error   { color: #e07070; }
+
+    /* ── add capsule button ── */
+    #add-btn {
+      margin-top: 1rem;
+      width: 100%;
+      max-width: 520px;
+      padding: 0.7rem;
+      background: transparent;
+      border: 1px dashed #1e1e2a;
+      border-radius: 14px;
+      color: #3a3a50;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 400;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    #add-btn:hover { border-color: #5b8dee; color: #5b8dee; }
   </style>
 </head>
 <body>
-  <div class="card">
+
+  <div class="page-header">
     <h1>Audio Downloader</h1>
-    <p class="subtitle">Paste a YouTube link and download the audio.</p>
-
-    <label for="urlInput">YouTube URL</label>
-    <div class="input-row">
-      <input
-        type="text"
-        id="urlInput"
-        placeholder="https://www.youtube.com/watch?v=..."
-        autocomplete="off"
-        oninput="onUrlInput(this.value)"
-      />
-      <button type="button" class="paste-btn" onclick="pasteFromClipboard()" title="Paste from clipboard">📋</button>
-    </div>
-
-    <div id="preview" class="preview hidden">
-      <img id="previewThumb" src="" alt="Video thumbnail" />
-      <div class="preview-info">
-        <span id="previewTitle" class="preview-title"></span>
-      </div>
-    </div>
-
-    <label style="margin-top: 1rem;">Format</label>
-    <div class="format-toggle">
-      <button type="button" class="fmt-btn active" data-fmt="mp3" onclick="selectFormat(this)">MP3</button>
-      <button type="button" class="fmt-btn" data-fmt="aac" onclick="selectFormat(this)">AAC</button>
-    </div>
-
-    <button id="downloadBtn" onclick="startDownload()">Download</button>
-    <div id="status"></div>
+    <p>Download YouTube audio in parallel — MP3 or AAC</p>
   </div>
 
+  <div id="capsule-list"></div>
+
+  <button id="add-btn" onclick="addCapsule()">+ Add another download</button>
+
   <script>
-    let selectedFormat = 'mp3';
-    let debounceTimer = null;
+    let capsuleCount = 0;
 
     function extractVideoId(url) {
       try {
@@ -251,26 +269,76 @@
       } catch { return null; }
     }
 
-    function onUrlInput(value) {
-      clearTimeout(debounceTimer);
-      const id = extractVideoId(value.trim());
-      const preview = document.getElementById('preview');
-      const thumb = document.getElementById('previewThumb');
-      const titleEl = document.getElementById('previewTitle');
+    function addCapsule() {
+      const id = ++capsuleCount;
+      const el = document.createElement('div');
+      el.className = 'capsule';
+      el.id = `capsule-${id}`;
+      el.dataset.format = 'mp3';
+      el.dataset.debounce = '';
 
-      if (!id) {
-        preview.classList.add('hidden');
+      el.innerHTML = `
+        <button class="capsule-remove" onclick="removeCapsule(${id})" title="Remove">✕</button>
+
+        <div class="input-row">
+          <input type="text" id="url-${id}" placeholder="https://www.youtube.com/watch?v=..."
+            autocomplete="off" oninput="onUrlInput(${id}, this.value)" />
+          <button class="paste-btn" onclick="pasteUrl(${id})" title="Paste from clipboard">📋</button>
+        </div>
+
+        <div class="preview" id="preview-${id}">
+          <img id="thumb-${id}" src="" alt="" />
+          <div class="preview-info">
+            <span class="preview-title" id="title-${id}"></span>
+          </div>
+        </div>
+
+        <div class="capsule-footer">
+          <div class="format-toggle">
+            <button class="fmt-btn active" data-fmt="mp3" onclick="selectFormat(${id}, this)">MP3</button>
+            <button class="fmt-btn"        data-fmt="aac" onclick="selectFormat(${id}, this)">AAC</button>
+          </div>
+          <button class="dl-btn" id="dl-${id}" onclick="startDownload(${id})">Download</button>
+        </div>
+
+        <div class="capsule-status" id="status-${id}"></div>
+      `;
+
+      document.getElementById('capsule-list').appendChild(el);
+
+      // Focus the new input
+      document.getElementById(`url-${id}`).focus();
+    }
+
+    function removeCapsule(id) {
+      const el = document.getElementById(`capsule-${id}`);
+      if (el) el.remove();
+      // Always keep at least one capsule
+      if (document.getElementById('capsule-list').children.length === 0) addCapsule();
+    }
+
+    function onUrlInput(id, value) {
+      const capsule = document.getElementById(`capsule-${id}`);
+      clearTimeout(Number(capsule.dataset.debounce));
+
+      const videoId = extractVideoId(value.trim());
+      const preview = document.getElementById(`preview-${id}`);
+      const thumb   = document.getElementById(`thumb-${id}`);
+      const titleEl = document.getElementById(`title-${id}`);
+
+      if (!videoId) {
+        preview.classList.remove('visible');
         return;
       }
 
-      // Show thumbnail immediately — no need to wait
-      thumb.onerror = () => { thumb.src = `https://img.youtube.com/vi/${id}/hqdefault.jpg`; thumb.onerror = null; };
-      thumb.src = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+      // Thumbnail loads instantly
+      thumb.onerror = () => { thumb.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`; thumb.onerror = null; };
+      thumb.src = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
       titleEl.textContent = '';
-      preview.classList.remove('hidden');
+      preview.classList.add('visible');
 
-      // Debounce the /info call — wait 500ms after user stops typing
-      debounceTimer = setTimeout(() => {
+      // Debounce title fetch
+      const timer = setTimeout(() => {
         fetch('/info', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -280,42 +348,47 @@
           .then(data => { if (data?.title) titleEl.textContent = data.title; })
           .catch(() => {});
       }, 500);
+
+      capsule.dataset.debounce = timer;
     }
 
-    async function pasteFromClipboard() {
+    async function pasteUrl(id) {
       try {
         const text = await navigator.clipboard.readText();
-        const input = document.getElementById('urlInput');
+        const input = document.getElementById(`url-${id}`);
         input.value = text;
-        onUrlInput(text);
+        onUrlInput(id, text);
       } catch {
-        setStatus('Clipboard access denied — paste manually.', 'error');
+        setStatus(id, 'Clipboard access denied — paste manually.', 'error');
       }
     }
 
-    function selectFormat(btn) {
-      document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
+    function selectFormat(id, btn) {
+      const capsule = document.getElementById(`capsule-${id}`);
+      capsule.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      selectedFormat = btn.dataset.fmt;
+      capsule.dataset.format = btn.dataset.fmt;
     }
 
-    async function startDownload() {
-      const url = document.getElementById('urlInput').value.trim();
-      const btn = document.getElementById('downloadBtn');
+    async function startDownload(id) {
+      const url    = document.getElementById(`url-${id}`).value.trim();
+      const dlBtn  = document.getElementById(`dl-${id}`);
+      const format = document.getElementById(`capsule-${id}`).dataset.format;
+      const capsule = document.getElementById(`capsule-${id}`);
 
-      if (!url) {
-        setStatus('Please enter a YouTube URL.', 'error');
-        return;
-      }
+      if (!url) { setStatus(id, 'Please enter a YouTube URL.', 'error'); return; }
 
-      btn.disabled = true;
-      setStatus('Fetching audio, this may take a moment...', 'loading');
+      dlBtn.disabled = true;
+      dlBtn.textContent = 'Downloading…';
+      dlBtn.className = 'dl-btn';
+      capsule.className = 'capsule downloading';
+      setStatus(id, 'Fetching audio, this may take a moment…', 'loading');
 
       try {
         const res = await fetch('/download', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, format: selectedFormat })
+          body: JSON.stringify({ url, format })
         });
 
         if (!res.ok) {
@@ -325,7 +398,7 @@
 
         const disposition = res.headers.get('Content-Disposition') || '';
         const match = disposition.match(/filename="(.+?)"/);
-        const filename = match ? match[1] : `audio.${selectedFormat}`;
+        const filename = match ? match[1] : `audio.${format}`;
 
         const blob = await res.blob();
         const a = document.createElement('a');
@@ -334,23 +407,28 @@
         a.click();
         URL.revokeObjectURL(a.href);
 
-        setStatus('Download started!', 'success');
+        dlBtn.disabled = false;
+        dlBtn.textContent = '✓ Done';
+        dlBtn.className = 'dl-btn done';
+        capsule.className = 'capsule done';
+        setStatus(id, `Saved as ${filename}`, 'success');
       } catch (err) {
-        setStatus(err.message, 'error');
-      } finally {
-        btn.disabled = false;
+        dlBtn.disabled = false;
+        dlBtn.textContent = 'Retry';
+        dlBtn.className = 'dl-btn errored';
+        capsule.className = 'capsule error-state';
+        setStatus(id, err.message, 'error');
       }
     }
 
-    function setStatus(msg, type) {
-      const el = document.getElementById('status');
+    function setStatus(id, msg, type) {
+      const el = document.getElementById(`status-${id}`);
       el.textContent = msg;
-      el.className = `status-${type}`;
+      el.className = `capsule-status ${type}`;
     }
 
-    document.getElementById('urlInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') startDownload();
-    });
+    // Start with one capsule
+    addCapsule();
   </script>
 </body>
 </html>
