@@ -17,6 +17,20 @@ const FORMATS = {
   aac: { mimeType: 'audio/aac',   ext: 'aac' },
 };
 
+// POST /info — returns video title for preview
+app.post('/info', (req, res) => {
+  const { url } = req.body;
+  if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
+    return res.status(400).json({ error: 'Invalid URL' });
+  }
+
+  const proc = spawn(YTDLP_PATH, ['--get-title', '--no-playlist', url]);
+  let title = '';
+  proc.stdout.on('data', (d) => { title += d.toString(); });
+  proc.on('close', () => res.json({ title: title.trim() }));
+  proc.on('error', () => res.status(500).json({ error: 'Failed' }));
+});
+
 // POST /download — streams audio directly to the client
 app.post('/download', (req, res) => {
   const { url, format = 'mp3' } = req.body;
