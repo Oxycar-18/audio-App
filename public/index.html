@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YTB MP3 Downloader</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f0f0f;
+      color: #f1f1f1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 0.4rem;
+      color: #ff4444;
+    }
+
+    p.subtitle {
+      font-size: 0.875rem;
+      color: #888;
+      margin-bottom: 1.8rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-bottom: 0.4rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #f1f1f1;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #ff4444;
+    }
+
+    button {
+      margin-top: 1.2rem;
+      width: 100%;
+      padding: 0.8rem;
+      background: #ff4444;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover:not(:disabled) { background: #e03333; }
+    button:disabled { background: #555; cursor: not-allowed; }
+
+    #status {
+      margin-top: 1rem;
+      font-size: 0.875rem;
+      min-height: 1.2rem;
+      text-align: center;
+    }
+
+    .status-loading { color: #f0a500; }
+    .status-error   { color: #ff4444; }
+    .status-success { color: #4caf50; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>YTB MP3 Downloader</h1>
+    <p class="subtitle">Paste a YouTube link and download the audio as MP3.</p>
+
+    <label for="urlInput">YouTube URL</label>
+    <input
+      type="text"
+      id="urlInput"
+      placeholder="https://www.youtube.com/watch?v=..."
+      autocomplete="off"
+    />
+
+    <button id="downloadBtn" onclick="downloadMp3()">Download MP3</button>
+    <div id="status"></div>
+  </div>
+
+  <script>
+    async function downloadMp3() {
+      const url = document.getElementById('urlInput').value.trim();
+      const status = document.getElementById('status');
+      const btn = document.getElementById('downloadBtn');
+
+      if (!url) {
+        setStatus('Please enter a YouTube URL.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      setStatus('Fetching audio, this may take a moment...', 'loading');
+
+      try {
+        const res = await fetch('/download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Download failed');
+        }
+
+        // Extract filename from Content-Disposition header
+        const disposition = res.headers.get('Content-Disposition') || '';
+        const match = disposition.match(/filename="(.+?)"/);
+        const filename = match ? match[1] : 'audio.mp3';
+
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+
+        setStatus('Download started!', 'success');
+      } catch (err) {
+        setStatus(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function setStatus(msg, type) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = `status-${type}`;
+    }
+
+    // Allow pressing Enter to trigger download
+    document.getElementById('urlInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') downloadMp3();
+    });
+  </script>
+</body>
+</html>

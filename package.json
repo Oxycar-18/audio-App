@@ -1,0 +1,12 @@
+{
+  "name": "ytb-mp3-downloader",
+  "version": "1.0.0",
+  "description": "Self-hosted YouTube to MP3 downloader",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
