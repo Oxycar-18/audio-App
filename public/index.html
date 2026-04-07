@@ -462,7 +462,22 @@
       });
     }
 
-    function extractVideoId(url) {
+    function isPlaylist(url) {
+      try {
+        const u = new URL(url);
+        return u.searchParams.has('list')
+          && !u.searchParams.has('v')
+          && u.searchParams.get('start_radio') !== '1';
+      } catch { return false; }
+    }
+
+    function isMixedPlaylistUrl(url) {
+      // Has both a video (?v=) and a list — user is on a video inside a playlist
+      try {
+        const u = new URL(url);
+        return u.searchParams.has('list') && u.searchParams.has('v');
+      } catch { return false; }
+    }
       try {
         const u = new URL(url);
         if (u.hostname.includes('youtu.be')) return u.pathname.slice(1).split('?')[0];
@@ -482,10 +497,7 @@
       tabs.forEach(t => t.classList.toggle('compact', perTab < COMPACT_THRESHOLD));
     }
 
-    function addTab() {
-      const id = ++tabCount;
-
-      // Create tab
+    function createTab(id) {
       const tab = document.createElement('div');
       tab.className = 'tab';
       tab.id = `tab-${id}`;
@@ -496,12 +508,8 @@
         <span class="tab-close" onclick="closeTab(event, ${id})">✕</span>
       `;
       tab.addEventListener('click', () => switchTab(id));
-
-      // Insert before the "+" button
-      // Insert into the scrollable tab bar
       document.getElementById('tab-bar').appendChild(tab);
 
-      // Create panel
       const panel = document.createElement('div');
       panel.className = 'panel';
       panel.id = `panel-${id}`;
@@ -537,11 +545,14 @@
           <button class="dl-all-btn" onclick="downloadAll()">⬇ Download all pending tabs</button>
         </div>
       `;
-
       document.getElementById('panels').appendChild(panel);
+    }
+
+    function addTab() {
+      const id = ++tabCount;
+      createTab(id);
       switchTab(id);
       updateTabSizes();
-      // Scroll new tab into view
       document.getElementById(`tab-${id}`)?.scrollIntoView({ inline: 'end', behavior: 'smooth' });
       document.getElementById(`url-${id}`).focus();
     }
@@ -597,7 +608,16 @@
       const panel = document.getElementById(`panel-${id}`);
       clearTimeout(Number(panel.dataset.debounce));
 
-      const videoId = extractVideoId(value.trim());
+      const trimmed = value.trim();
+
+      // If it's a pure playlist URL, wait for user to stop typing then expand
+      if (isPlaylist(trimmed)) {
+        const timer = setTimeout(() => expandPlaylist(id, trimmed), 800);
+        panel.dataset.debounce = timer;
+        return;
+      }
+
+      const videoId = extractVideoId(trimmed);
       const preview = document.getElementById(`preview-${id}`);
       const thumb   = document.getElementById(`thumb-${id}`);
       const titleEl = document.getElementById(`title-${id}`);
@@ -639,10 +659,60 @@
       try {
         const text = await navigator.clipboard.readText();
         const input = document.getElementById(`url-${id}`);
+
+        // Pure playlist URL — expand into multiple tabs
+        if (isPlaylist(text.trim())) {
+          await expandPlaylist(id, text.trim());
+          return;
+        }
+
         input.value = text;
         onUrlInput(id, text);
       } catch {
         setStatus(id, 'Clipboard access denied — paste manually.', 'error');
+      }
+    }
+
+    async function expandPlaylist(currentId, playlistUrl) {
+      const panel  = document.getElementById(`panel-${currentId}`);
+      const input  = document.getElementById(`url-${currentId}`);
+
+      // Show loading state on current tab
+      input.value = playlistUrl;
+      setStatus(currentId, 'Fetching playlist…', 'loading');
+
+      try {
+        const res  = await fetch('/playlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: playlistUrl })
+        });
+        const { urls, error } = await res.json();
+
+        if (error || !urls?.length) {
+          setStatus(currentId, error || 'No videos found in playlist.', 'error');
+          return;
+        }
+
+        // Fill the current tab with the first video
+        input.value = urls[0];
+        setStatus(currentId, `Playlist: ${urls.length} videos loaded`, 'success');
+        onUrlInput(currentId, urls[0]);
+
+        // Open a new tab for each remaining video
+        for (let i = 1; i < urls.length; i++) {
+          const newId = ++tabCount;
+          createTab(newId);
+          switchTab(newId);
+          updateTabSizes();
+          document.getElementById(`url-${newId}`).value = urls[i];
+          onUrlInput(newId, urls[i]);
+        }
+        // Switch back to first tab and update sizes
+        switchTab(currentId);
+        updateTabSizes();
+      } catch {
+        setStatus(currentId, 'Failed to fetch playlist.', 'error');
       }
     }
 
