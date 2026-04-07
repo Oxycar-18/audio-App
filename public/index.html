@@ -24,16 +24,27 @@
     }
 
     .page-header {
-      text-align: center;
+      display: flex;
+      align-items: center;
+      width: 100%;
+      max-width: 540px;
       margin-bottom: 2rem;
-      position: relative;
+    }
+
+    .page-header-center {
+      flex: 1;
+      text-align: center;
+    }
+
+    /* balances the left button so the title stays truly centered */
+    .page-header-spacer {
+      width: 70px;
+      flex-shrink: 0;
     }
 
     .default-fmt-btn {
-      position: absolute;
-      left: 0;
-      top: 50%;
-      transform: translateY(-50%);
+      flex-shrink: 0;
+      width: 70px;
       display: flex;
       align-items: center;
       gap: 0.35rem;
@@ -412,8 +423,11 @@
       <span class="default-fmt-icon">♪</span>
       <span id="default-fmt-label">MP3</span>
     </div>
-    <h1>Audio Downloader</h1>
-    <p>Download YouTube audio in parallel — MP3 or AAC</p>
+    <div class="page-header-center">
+      <h1>Audio Downloader</h1>
+      <p>Download YouTube audio in parallel — MP3 or AAC</p>
+    </div>
+    <div class="page-header-spacer"></div>
   </div>
 
   <div class="shell">
