@@ -2,6 +2,10 @@ const express = require('express');
 const { spawn } = require('child_process');
 const path = require('path');
 
+// Paths to binaries — update FFMPEG_PATH once you have a compiled ffmpeg.exe
+const YTDLP_PATH = 'C:\\Users\\arthur.bignier\\KIRO\\Sources\\yt-dlp.exe';
+const FFMPEG_PATH = 'ffmpeg'; // replace with full path to ffmpeg.exe when available
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -17,12 +21,12 @@ app.post('/download', (req, res) => {
   }
 
   // Use yt-dlp to extract audio and pipe it as MP3
-  // yt-dlp must be installed on the host: https://github.com/yt-dlp/yt-dlp
-  const ytDlp = spawn('yt-dlp', [
+  const ytDlp = spawn(YTDLP_PATH, [
     '--no-playlist',
     '-x',                        // extract audio
     '--audio-format', 'mp3',
     '--audio-quality', '0',      // best quality
+    '--ffmpeg-location', FFMPEG_PATH,
     '-o', '-',                   // output to stdout
     url
   ]);
@@ -30,7 +34,7 @@ app.post('/download', (req, res) => {
   let filename = 'audio.mp3';
 
   // Try to get the video title for the filename first
-  const titleProc = spawn('yt-dlp', ['--get-title', '--no-playlist', url]);
+  const titleProc = spawn(YTDLP_PATH, ['--get-title', '--no-playlist', url]);
   let title = '';
   titleProc.stdout.on('data', (d) => { title += d.toString().trim(); });
   titleProc.on('close', () => {
