@@ -421,7 +421,7 @@
   <div class="page-header">
     <div class="default-fmt-btn" onclick="cycleDefaultFormat()" title="Change default format">
       <span class="default-fmt-icon">♪</span>
-      <span id="default-fmt-label">MP3</span>
+      <span id="default-fmt-label">AAC</span>
     </div>
     <div class="page-header-center">
       <h1>Audio Downloader</h1>
@@ -442,11 +442,24 @@
   <script>
     let tabCount = 0;
     let activeTab = null;
-    let defaultFormat = 'mp3';
+    let defaultFormat = 'aac';
 
     function cycleDefaultFormat() {
       defaultFormat = defaultFormat === 'mp3' ? 'aac' : 'mp3';
       document.getElementById('default-fmt-label').textContent = defaultFormat.toUpperCase();
+
+      // Apply to all tabs not yet resolved (not done, not currently downloading)
+      document.querySelectorAll('.tab[data-id]').forEach(tab => {
+        const id = Number(tab.dataset.id);
+        const dlBtn = document.getElementById(`dl-${id}`);
+        if (!dlBtn || dlBtn.classList.contains('done') || dlBtn.disabled) return;
+
+        const panel = document.getElementById(`panel-${id}`);
+        panel.dataset.format = defaultFormat;
+        panel.querySelectorAll('.fmt-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.fmt === defaultFormat);
+        });
+      });
     }
 
     function extractVideoId(url) {
