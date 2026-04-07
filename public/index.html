@@ -304,6 +304,22 @@
       background: rgba(224,112,112,0.08);
     }
 
+    .tab-close-active {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 44px;
+      font-size: 0.85rem;
+      color: #3a3a50;
+      cursor: pointer;
+      border-left: 1px solid #1e1e2a;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .tab-close-active:hover { color: #e07070; background: rgba(224,112,112,0.08); }
+
     .panel-status {
       margin-top: 0.6rem;
       font-size: 0.76rem;
@@ -327,6 +343,7 @@
     <div class="tab-bar-wrap">
       <div class="tab-bar" id="tab-bar"></div>
       <div class="tab-add" onclick="addTab()" title="New download">+</div>
+      <div class="tab-close-active" id="close-active-btn" onclick="closeActiveTab()" title="Close current tab">✕</div>
     </div>
     <div id="panels"></div>
   </div>
@@ -402,7 +419,6 @@
             <button class="fmt-btn"        data-fmt="aac" onclick="selectFormat(${id}, this)">AAC</button>
           </div>
           <button class="dl-btn" id="dl-${id}" onclick="startDownload(${id})">Download</button>
-          <button class="close-panel-btn" onclick="closeTab(event, ${id})" title="Close this tab">✕</button>
         </div>
 
         <div class="panel-status" id="status-${id}"></div>
@@ -427,6 +443,10 @@
 
       // Scroll tab into view
       document.getElementById(`tab-${id}`)?.scrollIntoView({ inline: 'nearest', behavior: 'smooth' });
+    }
+
+    function closeActiveTab() {
+      if (activeTab !== null) closeTab(new Event('click'), activeTab);
     }
 
     function closeTab(e, id) {
