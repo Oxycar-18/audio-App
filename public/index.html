@@ -52,14 +52,22 @@
       box-shadow: 0 16px 48px rgba(0,0,0,0.5);
     }
 
-    /* ── tab bar ── */
-    .tab-bar {
+    /* ── tab bar wrapper ── */
+    .tab-bar-wrap {
       display: flex;
       align-items: stretch;
       background: #0e0e16;
       border-bottom: 1px solid #1e1e2a;
+    }
+
+    /* scrollable tabs area */
+    .tab-bar {
+      display: flex;
+      align-items: stretch;
+      flex: 1;
       overflow-x: auto;
       scrollbar-width: none;
+      min-width: 0;
     }
 
     .tab-bar::-webkit-scrollbar { display: none; }
@@ -298,7 +306,8 @@
   </div>
 
   <div class="shell">
-    <div class="tab-bar" id="tab-bar">
+    <div class="tab-bar-wrap">
+      <div class="tab-bar" id="tab-bar"></div>
       <div class="tab-add" onclick="addTab()" title="New download">+</div>
     </div>
     <div id="panels"></div>
@@ -322,9 +331,9 @@
     function updateTabSizes() {
       const bar    = document.getElementById('tab-bar');
       const tabs   = [...bar.querySelectorAll('.tab[data-id]')];
-      const addBtn = bar.querySelector('.tab-add');
-      const available = bar.clientWidth - addBtn.offsetWidth;
-      const perTab = available / tabs.length;
+      const addBtn = document.querySelector('.tab-add');
+      const available = bar.clientWidth; // add btn is now outside the scroll area
+      const perTab = tabs.length ? available / tabs.length : available;
       tabs.forEach(t => t.classList.toggle('compact', perTab < COMPACT_THRESHOLD));
     }
 
@@ -344,8 +353,8 @@
       tab.addEventListener('click', () => switchTab(id));
 
       // Insert before the "+" button
-      const addBtn = document.querySelector('.tab-add');
-      document.getElementById('tab-bar').insertBefore(tab, addBtn);
+      // Insert into the scrollable tab bar
+      document.getElementById('tab-bar').appendChild(tab);
 
       // Create panel
       const panel = document.createElement('div');
@@ -383,6 +392,8 @@
       document.getElementById('panels').appendChild(panel);
       switchTab(id);
       updateTabSizes();
+      // Scroll new tab into view
+      document.getElementById(`tab-${id}`)?.scrollIntoView({ inline: 'end', behavior: 'smooth' });
       document.getElementById(`url-${id}`).focus();
     }
 
@@ -538,7 +549,7 @@
     addTab();
 
     // Recompute on window resize
-    new ResizeObserver(updateTabSizes).observe(document.getElementById('tab-bar'));
+    new ResizeObserver(updateTabSizes).observe(document.querySelector('.tab-bar-wrap'));
   </script>
 </body>
 </html>
