@@ -286,6 +286,24 @@
     .dl-btn.done     { background: rgba(62,207,178,0.12); color: #3ecfb2; border: 1px solid #3ecfb244; }
     .dl-btn.errored  { background: rgba(224,112,112,0.1);  color: #e07070; border: 1px solid #e0707044; }
 
+    .close-panel-btn {
+      flex-shrink: 0;
+      padding: 0.52rem 0.7rem;
+      background: transparent;
+      border: 1px solid #1e1e2a;
+      border-radius: 8px;
+      color: #3a3a50;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+
+    .close-panel-btn:hover {
+      color: #e07070;
+      border-color: #e0707066;
+      background: rgba(224,112,112,0.08);
+    }
+
     .panel-status {
       margin-top: 0.6rem;
       font-size: 0.76rem;
@@ -384,6 +402,7 @@
             <button class="fmt-btn"        data-fmt="aac" onclick="selectFormat(${id}, this)">AAC</button>
           </div>
           <button class="dl-btn" id="dl-${id}" onclick="startDownload(${id})">Download</button>
+          <button class="close-panel-btn" onclick="closeTab(event, ${id})" title="Close this tab">✕</button>
         </div>
 
         <div class="panel-status" id="status-${id}"></div>
