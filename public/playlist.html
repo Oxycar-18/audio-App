@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Playlist Downloader</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0f;
+      color: #d4d4e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.5rem 1rem 4rem;
+    }
+
+    /* ── nav ── */
+    .nav {
+      width: 100%;
+      max-width: 580px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .nav a {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #6b6b80;
+      text-decoration: none;
+      padding: 0.35rem 0.75rem;
+      border: 1px solid #1e1e2a;
+      border-radius: 8px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .nav a:hover    { color: #5b8dee; border-color: #5b8dee; }
+    .nav a.active   { color: #3ecfb2; border-color: #3ecfb2; background: rgba(62,207,178,0.07); }
+
+    /* ── card ── */
+    .card {
+      width: 100%;
+      max-width: 580px;
+      background: #13131a;
+      border: 1px solid #1e1e2a;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    }
+
+    h1 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #e8e8f0;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      font-size: 0.8rem;
+      font-weight: 300;
+      color: #6b6b80;
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #6b6b80;
+      margin-bottom: 0.4rem;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 0.45rem;
+      margin-bottom: 1rem;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 0.68rem 0.95rem;
+      background: #0a0a0f;
+      border: 1px solid #1e1e2a;
+      border-radius: 10px;
+      color: #d4d4e0;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]::placeholder { color: #3a3a50; }
+    input[type="text"]:focus {
+      border-color: #5b8dee;
+      box-shadow: 0 0 0 3px rgba(91,141,238,0.1);
+    }
+
+    .paste-btn {
+      padding: 0 0.8rem;
+      background: #0a0a0f;
+      border: 1px solid #1e1e2a;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      color: #6b6b80;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .paste-btn:hover { border-color: #5b8dee; color: #5b8dee; background: #0a0a0f; }
+
+    /* format + fetch row */
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 1.2rem;
+    }
+
+    .format-toggle { display: flex; gap: 0.35rem; }
+
+    .fmt-btn {
+      padding: 0.45rem 0.8rem;
+      background: #0a0a0f;
+      border: 1px solid #1e1e2a;
+      border-radius: 8px;
+      color: #6b6b80;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .fmt-btn:hover  { border-color: #3ecfb2; color: #3ecfb2; }
+    .fmt-btn.active { background: rgba(62,207,178,0.1); border-color: #3ecfb2; color: #3ecfb2; }
+
+    .fetch-btn {
+      flex: 1;
+      padding: 0.52rem 1rem;
+      background: #5b8dee;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+
+    .fetch-btn:hover:not(:disabled) {
+      background: #4a7de0;
+      box-shadow: 0 4px 14px rgba(91,141,238,0.25);
+    }
+
+    .fetch-btn:disabled { background: #1e1e2a; color: #3a3a50; cursor: not-allowed; }
+
+    /* status */
+    #status {
+      font-size: 0.78rem;
+      min-height: 1rem;
+      margin-bottom: 0.8rem;
+      letter-spacing: 0.01em;
+    }
+
+    #status.loading { color: #8899cc; }
+    #status.error   { color: #e07070; }
+    #status.success { color: #3ecfb2; }
+
+    /* track list */
+    #track-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+    .track {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 0.8rem;
+      background: #0a0a0f;
+      border: 1px solid #1e1e2a;
+      border-radius: 10px;
+      transition: border-color 0.15s;
+    }
+
+    .track.done    { border-color: #3ecfb244; }
+    .track.errored { border-color: #e0707044; }
+    .track.active  { border-color: #5b8dee44; }
+
+    .track-thumb {
+      width: 56px;
+      height: 32px;
+      object-fit: cover;
+      border-radius: 5px;
+      background: #1e1e2a;
+      flex-shrink: 0;
+    }
+
+    .track-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .track-title {
+      font-size: 0.82rem;
+      color: #d4d4e0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-status {
+      font-size: 0.72rem;
+      color: #6b6b80;
+      margin-top: 0.15rem;
+    }
+
+    .track-status.loading { color: #8899cc; }
+    .track-status.success { color: #3ecfb2; }
+    .track-status.error   { color: #e07070; }
+
+    .track-dl-btn {
+      flex-shrink: 0;
+      padding: 0.35rem 0.7rem;
+      background: transparent;
+      border: 1px solid #1e1e2a;
+      border-radius: 7px;
+      color: #6b6b80;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .track-dl-btn:hover:not(:disabled) { border-color: #5b8dee; color: #5b8dee; }
+    .track-dl-btn:disabled { color: #3a3a50; cursor: not-allowed; }
+    .track-dl-btn.done     { color: #3ecfb2; border-color: #3ecfb244; }
+    .track-dl-btn.errored  { color: #e07070; border-color: #e0707044; }
+
+    /* download all bar */
+    .dl-all-row {
+      margin-top: 1.2rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid #1e1e2a;
+    }
+
+    .dl-all-btn {
+      width: 100%;
+      padding: 0.6rem;
+      background: transparent;
+      border: 1px dashed #2a2a3a;
+      border-radius: 8px;
+      color: #6b6b80;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+
+    .dl-all-btn:hover {
+      color: #5b8dee;
+      border-color: #5b8dee;
+      background: rgba(91,141,238,0.06);
+    }
+
+    .dl-all-btn:disabled { color: #3a3a50; cursor: not-allowed; border-color: #1e1e2a; }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/">⬅ Single downloads</a>
+    <a href="/playlist.html" class="active">Playlist</a>
+  </nav>
+
+  <div class="card">
+    <h1>Playlist Downloader</h1>
+    <p class="subtitle">Paste a YouTube playlist URL to load all tracks, then download individually or all at once.</p>
+
+    <label>Playlist URL</label>
+    <div class="input-row">
+      <input type="text" id="urlInput" placeholder="https://www.youtube.com/playlist?list=..." autocomplete="off" />
+      <button class="paste-btn" onclick="pasteUrl()" title="Paste">📋</button>
+    </div>
+
+    <div class="controls">
+      <div class="format-toggle">
+        <button class="fmt-btn" data-fmt="mp3" onclick="selectFormat(this)">MP3</button>
+        <button class="fmt-btn active" data-fmt="aac" onclick="selectFormat(this)">AAC</button>
+      </div>
+      <button class="fetch-btn" id="fetchBtn" onclick="fetchPlaylist()">Load playlist</button>
+    </div>
+
+    <div id="status"></div>
+    <div id="track-list"></div>
+
+    <div class="dl-all-row" id="dl-all-row" style="display:none">
+      <button class="dl-all-btn" id="dl-all-btn" onclick="downloadAll()">⬇ Download all pending tracks</button>
+    </div>
+  </div>
+
+  <script>
+    let selectedFormat = 'aac';
+    let tracks = []; // { url, title, id }
+
+    function selectFormat(btn) {
+      document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedFormat = btn.dataset.fmt;
+    }
+
+    async function pasteUrl() {
+      try {
+        const text = await navigator.clipboard.readText();
+        document.getElementById('urlInput').value = text;
+      } catch {
+        setStatus('Clipboard access denied — paste manually.', 'error');
+      }
+    }
+
+    function extractVideoId(url) {
+      try {
+        const u = new URL(url);
+        if (u.hostname.includes('youtu.be')) return u.pathname.slice(1).split('?')[0];
+        return u.searchParams.get('v');
+      } catch { return null; }
+    }
+
+    async function fetchPlaylist() {
+      const url = document.getElementById('urlInput').value.trim();
+      if (!url) { setStatus('Please enter a playlist URL.', 'error'); return; }
+
+      const fetchBtn = document.getElementById('fetchBtn');
+      fetchBtn.disabled = true;
+      setStatus('Loading playlist…', 'loading');
+      document.getElementById('track-list').innerHTML = '';
+      document.getElementById('dl-all-row').style.display = 'none';
+      tracks = [];
+
+      try {
+        const res = await fetch('/playlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+
+        if (data.error || !data.items?.length) {
+          setStatus(data.error || 'No tracks found.', 'error');
+          return;
+        }
+
+        tracks = data.items.map((item, i) => ({ ...item, id: i }));
+        setStatus(`${tracks.length} tracks loaded`, 'success');
+        renderTracks();
+        document.getElementById('dl-all-row').style.display = 'block';
+      } catch {
+        setStatus('Failed to load playlist.', 'error');
+      } finally {
+        fetchBtn.disabled = false;
+      }
+    }
+
+    function renderTracks() {
+      const list = document.getElementById('track-list');
+      list.innerHTML = '';
+      tracks.forEach(track => {
+        const videoId = extractVideoId(track.url);
+        const thumbSrc = videoId ? `https://img.youtube.com/vi/${videoId}/default.jpg` : '';
+
+        const el = document.createElement('div');
+        el.className = 'track';
+        el.id = `track-${track.id}`;
+        el.innerHTML = `
+          <img class="track-thumb" src="${thumbSrc}" alt="" onerror="this.style.visibility='hidden'" />
+          <div class="track-info">
+            <div class="track-title">${track.title || track.url}</div>
+            <div class="track-status" id="ts-${track.id}"></div>
+          </div>
+          <button class="track-dl-btn" id="tdb-${track.id}" onclick="downloadTrack(${track.id})">↓</button>
+        `;
+        list.appendChild(el);
+      });
+    }
+
+    async function downloadTrack(id) {
+      const track  = tracks[id];
+      const btn    = document.getElementById(`tdb-${id}`);
+      const el     = document.getElementById(`track-${id}`);
+      const status = document.getElementById(`ts-${id}`);
+
+      btn.disabled = true;
+      btn.textContent = '…';
+      el.className = 'track active';
+      status.textContent = 'Downloading…';
+      status.className = 'track-status loading';
+
+      try {
+        const res = await fetch('/download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: track.url, format: selectedFormat })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Download failed');
+        }
+
+        const disposition = res.headers.get('Content-Disposition') || '';
+        const match = disposition.match(/filename="(.+?)"/);
+        const filename = match ? match[1] : `audio.${selectedFormat}`;
+
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+
+        btn.textContent = '✓';
+        btn.className = 'track-dl-btn done';
+        el.className = 'track done';
+        status.textContent = filename;
+        status.className = 'track-status success';
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = '↓';
+        btn.className = 'track-dl-btn errored';
+        el.className = 'track errored';
+        status.textContent = err.message;
+        status.className = 'track-status error';
+      }
+    }
+
+    function downloadAll() {
+      tracks.forEach(track => {
+        const btn = document.getElementById(`tdb-${track.id}`);
+        if (!btn || btn.disabled || btn.classList.contains('done')) return;
+        downloadTrack(track.id);
+      });
+    }
+
+    function setStatus(msg, type) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = type;
+    }
+
+    document.getElementById('urlInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') fetchPlaylist();
+    });
+  </script>
+</body>
+</html>

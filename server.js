@@ -46,6 +46,37 @@ function fetchTitle(url) {
   });
 }
 
+// POST /playlist — returns all video URLs + titles in a playlist
+app.post('/playlist', (req, res) => {
+  const { url } = req.body;
+  if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
+    return res.status(400).json({ error: 'Invalid URL' });
+  }
+
+  // --print "%(url)s\t%(title)s" gives us url<tab>title per line
+  const proc = spawn(YTDLP_PATH, [
+    '--flat-playlist',
+    '--print', '%(url)s\t%(title)s',
+    '--no-warnings',
+    url
+  ]);
+
+  let out = '';
+  proc.stdout.on('data', d => { out += d.toString(); });
+  proc.on('close', () => {
+    const items = out.trim().split('\n')
+      .map(line => {
+        const tab = line.indexOf('\t');
+        return tab === -1
+          ? { url: line.trim(), title: '' }
+          : { url: line.slice(0, tab).trim(), title: line.slice(tab + 1).trim() };
+      })
+      .filter(item => item.url);
+    res.json({ items });
+  });
+  proc.on('error', () => res.status(500).json({ error: 'yt-dlp failed' }));
+});
+
 // POST /info — returns video title (used by the preview; result is cached)
 app.post('/info', async (req, res) => {
   const { url } = req.body;
