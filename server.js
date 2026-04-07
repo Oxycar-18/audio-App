@@ -46,29 +46,6 @@ function fetchTitle(url) {
   });
 }
 
-// POST /playlist — returns all video URLs in a playlist
-app.post('/playlist', (req, res) => {
-  const { url } = req.body;
-  if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
-    return res.status(400).json({ error: 'Invalid URL' });
-  }
-
-  const proc = spawn(YTDLP_PATH, [
-    '--flat-playlist',
-    '--print', 'url',
-    '--no-warnings',
-    url
-  ]);
-
-  let out = '';
-  proc.stdout.on('data', d => { out += d.toString(); });
-  proc.on('close', () => {
-    const urls = out.trim().split('\n').map(u => u.trim()).filter(Boolean);
-    res.json({ urls });
-  });
-  proc.on('error', () => res.status(500).json({ error: 'yt-dlp failed' }));
-});
-
 // POST /info — returns video title (used by the preview; result is cached)
 app.post('/info', async (req, res) => {
   const { url } = req.body;
