@@ -62,6 +62,29 @@
       border-color: #ff4444;
     }
 
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .input-row input {
+      flex: 1;
+    }
+
+    .paste-btn {
+      margin-top: 0;
+      width: auto;
+      padding: 0 0.9rem;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .paste-btn:hover { border-color: #ff4444; background: #111; }
+
     button {
       margin-top: 1.2rem;
       width: 100%;
@@ -150,13 +173,16 @@
     <p class="subtitle">Paste a YouTube link and download the audio.</p>
 
     <label for="urlInput">YouTube URL</label>
-    <input
-      type="text"
-      id="urlInput"
-      placeholder="https://www.youtube.com/watch?v=..."
-      autocomplete="off"
-      oninput="onUrlInput(this.value)"
-    />
+    <div class="input-row">
+      <input
+        type="text"
+        id="urlInput"
+        placeholder="https://www.youtube.com/watch?v=..."
+        autocomplete="off"
+        oninput="onUrlInput(this.value)"
+      />
+      <button type="button" class="paste-btn" onclick="pasteFromClipboard()" title="Paste from clipboard">📋</button>
+    </div>
 
     <div id="preview" class="preview hidden">
       <img id="previewThumb" src="" alt="Video thumbnail" />
@@ -177,6 +203,7 @@
 
   <script>
     let selectedFormat = 'mp3';
+    let debounceTimer = null;
 
     function extractVideoId(url) {
       try {
@@ -187,6 +214,7 @@
     }
 
     function onUrlInput(value) {
+      clearTimeout(debounceTimer);
       const id = extractVideoId(value.trim());
       const preview = document.getElementById('preview');
       const thumb = document.getElementById('previewThumb');
@@ -197,21 +225,34 @@
         return;
       }
 
-      // Use maxresdefault, fall back to hqdefault if it 404s
+      // Show thumbnail immediately — no need to wait
       thumb.onerror = () => { thumb.src = `https://img.youtube.com/vi/${id}/hqdefault.jpg`; thumb.onerror = null; };
       thumb.src = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
       titleEl.textContent = '';
       preview.classList.remove('hidden');
 
-      // Fetch title from our server
-      fetch('/info', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: value.trim() })
-      })
-        .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data?.title) titleEl.textContent = data.title; })
-        .catch(() => {});
+      // Debounce the /info call — wait 500ms after user stops typing
+      debounceTimer = setTimeout(() => {
+        fetch('/info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: value.trim() })
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => { if (data?.title) titleEl.textContent = data.title; })
+          .catch(() => {});
+      }, 500);
+    }
+
+    async function pasteFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        const input = document.getElementById('urlInput');
+        input.value = text;
+        onUrlInput(text);
+      } catch {
+        setStatus('Clipboard access denied — paste manually.', 'error');
+      }
     }
 
     function selectFormat(btn) {
@@ -222,7 +263,6 @@
 
     async function startDownload() {
       const url = document.getElementById('urlInput').value.trim();
-      const status = document.getElementById('status');
       const btn = document.getElementById('downloadBtn');
 
       if (!url) {
