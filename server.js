@@ -1,6 +1,7 @@
 const express = require('express');
 const { spawn } = require('child_process');
 const path = require('path');
+require('dotenv').config();
 
 // Configure via environment variables, or fall back to names on PATH.
 // On a new machine, set YTDLP_PATH and FFMPEG_PATH, or add both to your system PATH.
