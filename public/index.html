@@ -348,6 +348,33 @@
     .panel-status.loading { color: #8899cc; }
     .panel-status.success { color: #3ecfb2; }
     .panel-status.error   { color: #e07070; }
+
+    .dl-all-row {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #1e1e2a;
+    }
+
+    .dl-all-btn {
+      width: 100%;
+      padding: 0.6rem;
+      background: transparent;
+      border: 1px dashed #2a2a3a;
+      border-radius: 8px;
+      color: #6b6b80;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+
+    .dl-all-btn:hover {
+      color: #5b8dee;
+      border-color: #5b8dee;
+      background: rgba(91,141,238,0.06);
+    }
   </style>
 </head>
 <body>
@@ -360,7 +387,6 @@
   <div class="shell">
     <div class="tab-bar-wrap">
       <div class="tab-bar" id="tab-bar"></div>
-      <div class="tab-action" onclick="downloadAll()" title="Download all pending">⬇ All</div>
       <div class="tab-add" onclick="addTab()" title="New download">+</div>
       <div class="tab-close-active" id="close-active-btn" onclick="closeActiveTab()" title="Close current tab">✕</div>
     </div>
@@ -441,6 +467,10 @@
         </div>
 
         <div class="panel-status" id="status-${id}"></div>
+
+        <div class="dl-all-row">
+          <button class="dl-all-btn" onclick="downloadAll()">⬇ Download all pending tabs</button>
+        </div>
       `;
 
       document.getElementById('panels').appendChild(panel);
