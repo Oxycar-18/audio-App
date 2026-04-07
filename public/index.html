@@ -12,78 +12,134 @@
 
     body {
       font-family: 'Inter', sans-serif;
-      font-weight: 400;
       background: #0a0a0f;
       color: #d4d4e0;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 3rem 1rem 4rem;
+      justify-content: center;
+      padding: 2rem 1rem;
     }
 
-    /* ── page header ── */
     .page-header {
       text-align: center;
-      margin-bottom: 2.5rem;
+      margin-bottom: 2rem;
     }
 
     .page-header h1 {
-      font-size: 1.5rem;
+      font-size: 1.4rem;
       font-weight: 600;
       letter-spacing: -0.02em;
       color: #e8e8f0;
-      margin-bottom: 0.3rem;
+      margin-bottom: 0.25rem;
     }
 
     .page-header p {
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       font-weight: 300;
       color: #6b6b80;
     }
 
-    /* ── capsule list ── */
-    #capsule-list {
+    /* ── shell ── */
+    .shell {
       width: 100%;
-      max-width: 520px;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    /* ── single capsule ── */
-    .capsule {
+      max-width: 540px;
       background: #13131a;
       border: 1px solid #1e1e2a;
-      border-radius: 16px;
-      padding: 1.4rem 1.5rem 1.2rem;
-      position: relative;
-      transition: border-color 0.2s;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
     }
 
-    .capsule.downloading { border-color: #5b8dee44; }
-    .capsule.done        { border-color: #3ecfb244; }
-    .capsule.error-state { border-color: #e0707044; }
+    /* ── tab bar ── */
+    .tab-bar {
+      display: flex;
+      align-items: stretch;
+      background: #0e0e16;
+      border-bottom: 1px solid #1e1e2a;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
 
-    /* remove button */
-    .capsule-remove {
-      position: absolute;
-      top: 0.9rem;
-      right: 0.9rem;
-      background: none;
-      border: none;
-      color: #3a3a50;
-      font-size: 1rem;
+    .tab-bar::-webkit-scrollbar { display: none; }
+
+    .tab {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0 1.1rem;
+      height: 44px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #6b6b80;
       cursor: pointer;
-      line-height: 1;
-      padding: 0.1rem 0.3rem;
-      border-radius: 6px;
-      transition: color 0.15s, background 0.15s;
-      margin: 0;
-      width: auto;
+      border-right: 1px solid #1e1e2a;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+      user-select: none;
+      position: relative;
     }
 
-    .capsule-remove:hover { color: #e07070; background: rgba(224,112,112,0.08); }
+    .tab:hover { color: #a0a0b8; }
+
+    .tab.active {
+      color: #d4d4e0;
+      border-bottom-color: #5b8dee;
+      background: #13131a;
+    }
+
+    /* status dot on tab */
+    .tab-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: transparent;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+
+    .tab.downloading .tab-dot { background: #5b8dee; }
+    .tab.done        .tab-dot { background: #3ecfb2; }
+    .tab.errored     .tab-dot { background: #e07070; }
+
+    .tab-close {
+      font-size: 0.7rem;
+      color: #3a3a50;
+      margin-left: 0.1rem;
+      padding: 0.1rem 0.2rem;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+      line-height: 1;
+    }
+
+    .tab-close:hover { color: #e07070; background: rgba(224,112,112,0.1); }
+
+    /* add tab button */
+    .tab-add {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      font-size: 1.1rem;
+      color: #3a3a50;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .tab-add:hover { color: #5b8dee; }
+
+    /* ── panel ── */
+    .panel {
+      padding: 1.8rem 2rem 1.6rem;
+      display: none;
+    }
+
+    .panel.active { display: block; }
 
     /* input row */
     .input-row {
@@ -94,7 +150,7 @@
 
     input[type="text"] {
       flex: 1;
-      padding: 0.65rem 0.9rem;
+      padding: 0.68rem 0.95rem;
       background: #0a0a0f;
       border: 1px solid #1e1e2a;
       border-radius: 10px;
@@ -106,6 +162,7 @@
     }
 
     input[type="text"]::placeholder { color: #3a3a50; }
+
     input[type="text"]:focus {
       border-color: #5b8dee;
       box-shadow: 0 0 0 3px rgba(91,141,238,0.1);
@@ -120,15 +177,13 @@
       cursor: pointer;
       color: #6b6b80;
       transition: border-color 0.2s, color 0.2s;
-      margin: 0;
-      width: auto;
     }
 
     .paste-btn:hover { border-color: #5b8dee; color: #5b8dee; background: #0a0a0f; }
 
-    /* thumbnail preview */
+    /* preview */
     .preview {
-      margin-top: 0.9rem;
+      margin-top: 1rem;
       border-radius: 10px;
       overflow: hidden;
       border: 1px solid #1e1e2a;
@@ -145,7 +200,7 @@
       object-fit: cover;
     }
 
-    .preview-info { padding: 0.5rem 0.8rem; }
+    .preview-info { padding: 0.5rem 0.85rem; }
 
     .preview-title {
       font-size: 0.8rem;
@@ -154,24 +209,20 @@
       -webkit-line-clamp: 1;
       -webkit-box-orient: vertical;
       overflow: hidden;
-      line-height: 1.4;
     }
 
-    /* bottom row: format + download */
-    .capsule-footer {
+    /* footer */
+    .panel-footer {
       display: flex;
       gap: 0.5rem;
-      margin-top: 0.9rem;
+      margin-top: 1rem;
       align-items: center;
     }
 
-    .format-toggle {
-      display: flex;
-      gap: 0.35rem;
-    }
+    .format-toggle { display: flex; gap: 0.35rem; }
 
     .fmt-btn {
-      padding: 0.45rem 0.75rem;
+      padding: 0.45rem 0.8rem;
       background: #0a0a0f;
       border: 1px solid #1e1e2a;
       border-radius: 8px;
@@ -182,11 +233,9 @@
       letter-spacing: 0.04em;
       cursor: pointer;
       transition: all 0.2s;
-      margin: 0;
-      width: auto;
     }
 
-    .fmt-btn:hover { border-color: #3ecfb2; color: #3ecfb2; }
+    .fmt-btn:hover  { border-color: #3ecfb2; color: #3ecfb2; }
     .fmt-btn.active { background: rgba(62,207,178,0.1); border-color: #3ecfb2; color: #3ecfb2; }
 
     .dl-btn {
@@ -201,8 +250,6 @@
       font-weight: 500;
       cursor: pointer;
       transition: background 0.2s, box-shadow 0.2s;
-      margin: 0;
-      width: auto;
     }
 
     .dl-btn:hover:not(:disabled) {
@@ -211,40 +258,19 @@
     }
 
     .dl-btn:disabled { background: #1e1e2a; color: #3a3a50; cursor: not-allowed; }
-    .dl-btn.done     { background: rgba(62,207,178,0.15); color: #3ecfb2; border: 1px solid #3ecfb244; }
-    .dl-btn.errored  { background: rgba(224,112,112,0.12); color: #e07070; border: 1px solid #e0707044; }
+    .dl-btn.done     { background: rgba(62,207,178,0.12); color: #3ecfb2; border: 1px solid #3ecfb244; }
+    .dl-btn.errored  { background: rgba(224,112,112,0.1);  color: #e07070; border: 1px solid #e0707044; }
 
-    /* status line */
-    .capsule-status {
-      margin-top: 0.55rem;
+    .panel-status {
+      margin-top: 0.6rem;
       font-size: 0.76rem;
       min-height: 1rem;
       letter-spacing: 0.01em;
-      padding-left: 0.1rem;
     }
 
-    .capsule-status.loading { color: #8899cc; }
-    .capsule-status.success { color: #3ecfb2; }
-    .capsule-status.error   { color: #e07070; }
-
-    /* ── add capsule button ── */
-    #add-btn {
-      margin-top: 1rem;
-      width: 100%;
-      max-width: 520px;
-      padding: 0.7rem;
-      background: transparent;
-      border: 1px dashed #1e1e2a;
-      border-radius: 14px;
-      color: #3a3a50;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.85rem;
-      font-weight: 400;
-      cursor: pointer;
-      transition: border-color 0.2s, color 0.2s;
-    }
-
-    #add-btn:hover { border-color: #5b8dee; color: #5b8dee; }
+    .panel-status.loading { color: #8899cc; }
+    .panel-status.success { color: #3ecfb2; }
+    .panel-status.error   { color: #e07070; }
   </style>
 </head>
 <body>
@@ -254,12 +280,16 @@
     <p>Download YouTube audio in parallel — MP3 or AAC</p>
   </div>
 
-  <div id="capsule-list"></div>
-
-  <button id="add-btn" onclick="addCapsule()">+ Add another download</button>
+  <div class="shell">
+    <div class="tab-bar" id="tab-bar">
+      <div class="tab-add" onclick="addTab()" title="New download">+</div>
+    </div>
+    <div id="panels"></div>
+  </div>
 
   <script>
-    let capsuleCount = 0;
+    let tabCount = 0;
+    let activeTab = null;
 
     function extractVideoId(url) {
       try {
@@ -269,21 +299,38 @@
       } catch { return null; }
     }
 
-    function addCapsule() {
-      const id = ++capsuleCount;
-      const el = document.createElement('div');
-      el.className = 'capsule';
-      el.id = `capsule-${id}`;
-      el.dataset.format = 'mp3';
-      el.dataset.debounce = '';
+    function addTab() {
+      const id = ++tabCount;
 
-      el.innerHTML = `
-        <button class="capsule-remove" onclick="removeCapsule(${id})" title="Remove">✕</button>
+      // Create tab
+      const tab = document.createElement('div');
+      tab.className = 'tab';
+      tab.id = `tab-${id}`;
+      tab.dataset.id = id;
+      tab.innerHTML = `
+        <span class="tab-dot"></span>
+        <span class="tab-label">Download ${id}</span>
+        <span class="tab-close" onclick="closeTab(event, ${id})">✕</span>
+      `;
+      tab.addEventListener('click', () => switchTab(id));
 
+      // Insert before the "+" button
+      const addBtn = document.querySelector('.tab-add');
+      document.getElementById('tab-bar').insertBefore(tab, addBtn);
+
+      // Create panel
+      const panel = document.createElement('div');
+      panel.className = 'panel';
+      panel.id = `panel-${id}`;
+      panel.dataset.format = 'mp3';
+      panel.dataset.debounce = '';
+      panel.innerHTML = `
         <div class="input-row">
-          <input type="text" id="url-${id}" placeholder="https://www.youtube.com/watch?v=..."
-            autocomplete="off" oninput="onUrlInput(${id}, this.value)" />
-          <button class="paste-btn" onclick="pasteUrl(${id})" title="Paste from clipboard">📋</button>
+          <input type="text" id="url-${id}"
+            placeholder="https://www.youtube.com/watch?v=..."
+            autocomplete="off"
+            oninput="onUrlInput(${id}, this.value)" />
+          <button class="paste-btn" onclick="pasteUrl(${id})" title="Paste">📋</button>
         </div>
 
         <div class="preview" id="preview-${id}">
@@ -293,7 +340,7 @@
           </div>
         </div>
 
-        <div class="capsule-footer">
+        <div class="panel-footer">
           <div class="format-toggle">
             <button class="fmt-btn active" data-fmt="mp3" onclick="selectFormat(${id}, this)">MP3</button>
             <button class="fmt-btn"        data-fmt="aac" onclick="selectFormat(${id}, this)">AAC</button>
@@ -301,43 +348,64 @@
           <button class="dl-btn" id="dl-${id}" onclick="startDownload(${id})">Download</button>
         </div>
 
-        <div class="capsule-status" id="status-${id}"></div>
+        <div class="panel-status" id="status-${id}"></div>
       `;
 
-      document.getElementById('capsule-list').appendChild(el);
-
-      // Focus the new input
+      document.getElementById('panels').appendChild(panel);
+      switchTab(id);
       document.getElementById(`url-${id}`).focus();
     }
 
-    function removeCapsule(id) {
-      const el = document.getElementById(`capsule-${id}`);
-      if (el) el.remove();
-      // Always keep at least one capsule
-      if (document.getElementById('capsule-list').children.length === 0) addCapsule();
+    function switchTab(id) {
+      // Deactivate all
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+
+      document.getElementById(`tab-${id}`)?.classList.add('active');
+      document.getElementById(`panel-${id}`)?.classList.add('active');
+      activeTab = id;
+
+      // Scroll tab into view
+      document.getElementById(`tab-${id}`)?.scrollIntoView({ inline: 'nearest', behavior: 'smooth' });
+    }
+
+    function closeTab(e, id) {
+      e.stopPropagation();
+
+      const allTabs = [...document.querySelectorAll('.tab[data-id]')];
+      if (allTabs.length === 1) return; // keep at least one
+
+      document.getElementById(`tab-${id}`)?.remove();
+      document.getElementById(`panel-${id}`)?.remove();
+
+      // Switch to nearest remaining tab
+      if (activeTab === id) {
+        const remaining = [...document.querySelectorAll('.tab[data-id]')];
+        if (remaining.length) switchTab(Number(remaining[remaining.length - 1].dataset.id));
+      }
     }
 
     function onUrlInput(id, value) {
-      const capsule = document.getElementById(`capsule-${id}`);
-      clearTimeout(Number(capsule.dataset.debounce));
+      const panel = document.getElementById(`panel-${id}`);
+      clearTimeout(Number(panel.dataset.debounce));
 
       const videoId = extractVideoId(value.trim());
       const preview = document.getElementById(`preview-${id}`);
       const thumb   = document.getElementById(`thumb-${id}`);
       const titleEl = document.getElementById(`title-${id}`);
+      const tab     = document.getElementById(`tab-${id}`);
 
       if (!videoId) {
         preview.classList.remove('visible');
+        tab.querySelector('.tab-label').textContent = `Download ${id}`;
         return;
       }
 
-      // Thumbnail loads instantly
       thumb.onerror = () => { thumb.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`; thumb.onerror = null; };
       thumb.src = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
       titleEl.textContent = '';
       preview.classList.add('visible');
 
-      // Debounce title fetch
       const timer = setTimeout(() => {
         fetch('/info', {
           method: 'POST',
@@ -345,11 +413,18 @@
           body: JSON.stringify({ url: value.trim() })
         })
           .then(r => r.ok ? r.json() : null)
-          .then(data => { if (data?.title) titleEl.textContent = data.title; })
+          .then(data => {
+            if (data?.title) {
+              titleEl.textContent = data.title;
+              // Shorten title for tab label
+              const short = data.title.length > 22 ? data.title.slice(0, 20) + '…' : data.title;
+              tab.querySelector('.tab-label').textContent = short;
+            }
+          })
           .catch(() => {});
       }, 500);
 
-      capsule.dataset.debounce = timer;
+      panel.dataset.debounce = timer;
     }
 
     async function pasteUrl(id) {
@@ -364,24 +439,25 @@
     }
 
     function selectFormat(id, btn) {
-      const capsule = document.getElementById(`capsule-${id}`);
-      capsule.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
+      const panel = document.getElementById(`panel-${id}`);
+      panel.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      capsule.dataset.format = btn.dataset.fmt;
+      panel.dataset.format = btn.dataset.fmt;
     }
 
     async function startDownload(id) {
       const url    = document.getElementById(`url-${id}`).value.trim();
       const dlBtn  = document.getElementById(`dl-${id}`);
-      const format = document.getElementById(`capsule-${id}`).dataset.format;
-      const capsule = document.getElementById(`capsule-${id}`);
+      const panel  = document.getElementById(`panel-${id}`);
+      const tab    = document.getElementById(`tab-${id}`);
+      const format = panel.dataset.format;
 
       if (!url) { setStatus(id, 'Please enter a YouTube URL.', 'error'); return; }
 
       dlBtn.disabled = true;
       dlBtn.textContent = 'Downloading…';
       dlBtn.className = 'dl-btn';
-      capsule.className = 'capsule downloading';
+      tab.className = 'tab downloading' + (activeTab === id ? ' active' : '');
       setStatus(id, 'Fetching audio, this may take a moment…', 'loading');
 
       try {
@@ -410,13 +486,13 @@
         dlBtn.disabled = false;
         dlBtn.textContent = '✓ Done';
         dlBtn.className = 'dl-btn done';
-        capsule.className = 'capsule done';
+        tab.className = 'tab done' + (activeTab === id ? ' active' : '');
         setStatus(id, `Saved as ${filename}`, 'success');
       } catch (err) {
         dlBtn.disabled = false;
         dlBtn.textContent = 'Retry';
         dlBtn.className = 'dl-btn errored';
-        capsule.className = 'capsule error-state';
+        tab.className = 'tab errored' + (activeTab === id ? ' active' : '');
         setStatus(id, err.message, 'error');
       }
     }
@@ -424,11 +500,11 @@
     function setStatus(id, msg, type) {
       const el = document.getElementById(`status-${id}`);
       el.textContent = msg;
-      el.className = `capsule-status ${type}`;
+      el.className = `panel-status ${type}`;
     }
 
-    // Start with one capsule
-    addCapsule();
+    // Start with one tab
+    addTab();
   </script>
 </body>
 </html>
