@@ -304,8 +304,26 @@
       background: rgba(224,112,112,0.08);
     }
 
-    .tab-close-active {
+    .tab-action {
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 0.75rem;
+      height: 44px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      color: #6b6b80;
+      cursor: pointer;
+      border-left: 1px solid #1e1e2a;
+      transition: color 0.15s, background 0.15s;
+      white-space: nowrap;
+    }
+
+    .tab-action:hover { color: #5b8dee; background: rgba(91,141,238,0.07); }
+
+    .tab-close-active {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -342,6 +360,7 @@
   <div class="shell">
     <div class="tab-bar-wrap">
       <div class="tab-bar" id="tab-bar"></div>
+      <div class="tab-action" onclick="downloadAll()" title="Download all pending">⬇ All</div>
       <div class="tab-add" onclick="addTab()" title="New download">+</div>
       <div class="tab-close-active" id="close-active-btn" onclick="closeActiveTab()" title="Close current tab">✕</div>
     </div>
@@ -447,6 +466,19 @@
 
     function closeActiveTab() {
       if (activeTab !== null) closeTab(new Event('click'), activeTab);
+    }
+
+    function downloadAll() {
+      const tabs = [...document.querySelectorAll('.tab[data-id]')];
+      tabs.forEach(tab => {
+        const id = Number(tab.dataset.id);
+        const dlBtn = document.getElementById(`dl-${id}`);
+        // Skip tabs already done or currently downloading
+        if (!dlBtn || dlBtn.classList.contains('done') || dlBtn.disabled) return;
+        const url = document.getElementById(`url-${id}`)?.value.trim();
+        if (!url) return;
+        startDownload(id);
+      });
     }
 
     function closeTab(e, id) {
