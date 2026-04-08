@@ -5,6 +5,10 @@ const os = require('os');
 const fs = require('fs');
 require('dotenv').config();
 
+// Keep the server alive on unexpected errors
+process.on('uncaughtException', err => console.error('Uncaught exception:', err.message));
+process.on('unhandledRejection', err => console.error('Unhandled rejection:', err));
+
 const YTDLP_PATH  = process.env.YTDLP_PATH  || 'yt-dlp';
 const FFMPEG_PATH = process.env.FFMPEG_PATH || 'ffmpeg';
 
@@ -144,7 +148,8 @@ app.post('/download', async (req, res) => {
 
   // AAC and M4A need a temp file; MP3 can stream directly
   if (fmt.ext === 'aac' || fmt.ext === 'm4a') {
-    const tmpFile = path.join(os.tmpdir(), `ytdl_${Date.now()}.${fmt.ext}`);
+    const tmpBase = path.join(os.tmpdir(), `ytdl_${Date.now()}`);
+    const tmpFile = `${tmpBase}.${fmt.ext}`;
 
     const ytDlp = spawn(YTDLP_PATH, [
       '--no-playlist', '-x',
@@ -165,7 +170,16 @@ app.post('/download', async (req, res) => {
         if (!res.headersSent) res.status(500).json({ error: `yt-dlp exited with code ${code}` });
         return;
       }
+      // Check file exists before streaming
+      if (!fs.existsSync(tmpFile)) {
+        if (!res.headersSent) res.status(500).json({ error: 'Output file not found after conversion' });
+        return;
+      }
       const stream = fs.createReadStream(tmpFile);
+      stream.on('error', err => {
+        console.error('Read stream error:', err.message);
+        if (!res.headersSent) res.status(500).json({ error: 'Failed to read output file' });
+      });
       stream.pipe(res);
       stream.on('close', () => fs.unlink(tmpFile, () => {}));
     });
