@@ -146,71 +146,48 @@ app.post('/download', async (req, res) => {
     '--postprocessor-args', `ffmpeg:-metadata artist="${artistName}" -metadata title="${cleanedTitle}"`,
   ];
 
-  // AAC and M4A need a temp file; MP3 can stream directly
-  if (fmt.ext === 'aac' || fmt.ext === 'm4a') {
-    const tmpBase = path.join(os.tmpdir(), `ytdl_${Date.now()}`);
-    const tmpFile = `${tmpBase}.${fmt.ext}`;
+  // All formats use a temp file so ffmpeg can properly encode + embed metadata
+  const tmpBase = path.join(os.tmpdir(), `ytdl_${Date.now()}`);
+  const tmpFile = `${tmpBase}.${fmt.ext}`;
 
-    const ytDlp = spawn(YTDLP_PATH, [
-      '--no-playlist', '-x',
-      '--audio-format', fmt.ytdlpFmt,
-      '--audio-quality', '0',
-      '--ffmpeg-location', FFMPEG_PATH,
-      ...metaFlags,
-      '-o', tmpFile,
-      url
-    ]);
+  const ytDlp = spawn(YTDLP_PATH, [
+    '--no-playlist', '-x',
+    '--audio-format', fmt.ytdlpFmt,
+    '--audio-quality', '0',
+    '--ffmpeg-location', FFMPEG_PATH,
+    ...metaFlags,
+    '-o', tmpFile,
+    url
+  ]);
 
-    ytDlp.stderr.on('data', d => console.error('[yt-dlp]', d.toString()));
-    ytDlp.on('error', err => {
-      if (!res.headersSent) res.status(500).json({ error: 'yt-dlp failed to start' });
+  ytDlp.stderr.on('data', d => console.error('[yt-dlp]', d.toString()));
+  ytDlp.on('error', err => {
+    if (!res.headersSent) res.status(500).json({ error: 'yt-dlp failed to start' });
+  });
+  ytDlp.on('close', code => {
+    if (code !== 0) {
+      if (!res.headersSent) res.status(500).json({ error: `yt-dlp exited with code ${code}` });
+      return;
+    }
+    // yt-dlp may write a different extension — find whatever it created
+    const dir   = path.dirname(tmpFile);
+    const base  = path.basename(tmpBase);
+    const files = fs.readdirSync(dir).filter(f => f.startsWith(base));
+    console.log('[debug] expected:', tmpFile, '| found:', files);
+
+    const actualFile = files.length ? path.join(dir, files[0]) : null;
+    if (!actualFile) {
+      if (!res.headersSent) res.status(500).json({ error: 'Output file not found after conversion' });
+      return;
+    }
+    const stream = fs.createReadStream(actualFile);
+    stream.on('error', err => {
+      console.error('Read stream error:', err.message);
+      if (!res.headersSent) res.status(500).json({ error: 'Failed to read output file' });
     });
-    ytDlp.on('close', code => {
-      if (code !== 0) {
-        if (!res.headersSent) res.status(500).json({ error: `yt-dlp exited with code ${code}` });
-        return;
-      }
-      // yt-dlp may write a different extension — find whatever it created
-      const dir  = path.dirname(tmpFile);
-      const base = path.basename(tmpBase);
-      const files = fs.readdirSync(dir).filter(f => f.startsWith(base));
-      console.log('[debug] expected:', tmpFile, '| found:', files);
-
-      const actualFile = files.length ? path.join(dir, files[0]) : null;
-      if (!actualFile) {
-        if (!res.headersSent) res.status(500).json({ error: 'Output file not found after conversion' });
-        return;
-      }
-      const stream = fs.createReadStream(actualFile);
-      stream.on('error', err => {
-        console.error('Read stream error:', err.message);
-        if (!res.headersSent) res.status(500).json({ error: 'Failed to read output file' });
-      });
-      stream.pipe(res);
-      stream.on('close', () => fs.unlink(actualFile, () => {}));
-    });
-
-  } else {
-    // MP3 — stream stdout
-    const ytDlp = spawn(YTDLP_PATH, [
-      '--no-playlist', '-x',
-      '--audio-format', fmt.ytdlpFmt,
-      '--audio-quality', '0',
-      '--ffmpeg-location', FFMPEG_PATH,
-      ...metaFlags,
-      '-o', '-',
-      url
-    ]);
-
-    ytDlp.stdout.pipe(res);
-    ytDlp.stderr.on('data', d => console.error('[yt-dlp]', d.toString()));
-    ytDlp.on('error', () => {
-      if (!res.headersSent) res.status(500).json({ error: 'yt-dlp failed to start' });
-    });
-    ytDlp.on('close', code => {
-      if (code !== 0) console.error(`yt-dlp exited with code ${code}`);
-    });
-  }
+    stream.pipe(res);
+    stream.on('close', () => fs.unlink(actualFile, () => {}));
+  });
 });
 
 app.listen(PORT, () => {
