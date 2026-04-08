@@ -1,10 +1,10 @@
 const express = require('express');
 const { spawn } = require('child_process');
 const path = require('path');
+const os = require('os');
+const fs = require('fs');
 require('dotenv').config();
 
-// Configure via environment variables, or fall back to names on PATH.
-// On a new machine, set YTDLP_PATH and FFMPEG_PATH, or add both to your system PATH.
 const YTDLP_PATH  = process.env.YTDLP_PATH  || 'yt-dlp';
 const FFMPEG_PATH = process.env.FFMPEG_PATH || 'ffmpeg';
 
@@ -17,11 +17,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 const FORMATS = {
   mp3: { mimeType: 'audio/mpeg', ext: 'mp3', ytdlpFmt: 'mp3' },
   aac: { mimeType: 'audio/aac',  ext: 'aac', ytdlpFmt: 'aac' },
-  m4a: { mimeType: 'audio/mp4',  ext: 'm4a', ytdlpFmt: 'aac' }, // aac codec in m4a container
+  m4a: { mimeType: 'audio/mp4',  ext: 'm4a', ytdlpFmt: 'aac' },
 };
 
-// Simple in-memory title cache: videoId -> title string
-const titleCache = new Map();
+// Cache: videoId -> { title, uploader }
+const infoCache = new Map();
 
 function getVideoId(url) {
   try {
@@ -31,48 +31,73 @@ function getVideoId(url) {
   } catch { return null; }
 }
 
-// Sanitize a string for use as a filename — keeps spaces, removes only truly invalid chars
-function toSafeFilename(str) {
-  return str
-    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '') // remove chars illegal on Windows/Mac
-    .trim()
-    .replace(/\.+$/, '')                     // no trailing dots
-    || 'audio';
-}
+// Fetch title + uploader in one yt-dlp call
+function fetchInfo(url) {
   return new Promise((resolve) => {
     const id = getVideoId(url);
-    if (id && titleCache.has(id)) return resolve(titleCache.get(id));
+    if (id && infoCache.has(id)) return resolve(infoCache.get(id));
 
-    const proc = spawn(YTDLP_PATH, ['--get-title', '--no-playlist', url]);
+    const proc = spawn(YTDLP_PATH, [
+      '--no-playlist', '--print', 'title', '--print', 'uploader', url
+    ]);
     let out = '';
-    proc.stdout.on('data', (d) => { out += d.toString(); });
+    proc.stdout.on('data', d => { out += d.toString(); });
     proc.on('close', () => {
-      const title = out.trim();
-      if (id && title) titleCache.set(id, title);
-      resolve(title);
+      const lines    = out.trim().split('\n');
+      const title    = (lines[0] || '').trim();
+      const uploader = (lines[1] || '').trim();
+      const info = { title, uploader };
+      if (id) infoCache.set(id, info);
+      resolve(info);
     });
-    proc.on('error', () => resolve(''));
+    proc.on('error', () => resolve({ title: '', uploader: '' }));
   });
 }
 
-// POST /playlist — returns all video URLs + titles in a playlist
+// Remove illegal filename chars, keep spaces
+function toSafeFilename(str) {
+  return str
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '')
+    .trim()
+    .replace(/\.+$/, '')
+    || 'audio';
+}
+
+// Strip author name from title if it appears (e.g. "Artist - Song" -> "Song")
+function cleanTitle(title, uploader) {
+  if (!uploader || !title) return title;
+  // Remove common patterns: "Artist - ", "Artist: ", "(Artist)"
+  // Also handle "Artist Topic" channel names (YouTube auto-generated)
+  const artist = uploader.replace(/\s*-\s*Topic$/, '').trim();
+  const escaped = artist.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return title
+    .replace(new RegExp(`^${escaped}\\s*[-–—:]\\s*`, 'i'), '')
+    .replace(new RegExp(`\\s*[-–—:]\\s*${escaped}$`, 'i'), '')
+    .trim() || title;
+}
+
+// POST /info — preview title for the UI
+app.post('/info', async (req, res) => {
+  const { url } = req.body;
+  if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
+    return res.status(400).json({ error: 'Invalid URL' });
+  }
+  const { title } = await fetchInfo(url);
+  res.json({ title });
+});
+
+// POST /playlist — returns all video URLs + titles
 app.post('/playlist', (req, res) => {
   const { url } = req.body;
   if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
     return res.status(400).json({ error: 'Invalid URL' });
   }
 
-  // Use two separate --print calls to avoid tab-escape issues:
-  // first collect URLs, then titles, then zip them
-  const urlProc = spawn(YTDLP_PATH, [
-    '--flat-playlist', '--print', 'url', '--no-warnings', url
-  ]);
-  const titleProc = spawn(YTDLP_PATH, [
-    '--flat-playlist', '--print', 'title', '--no-warnings', url
-  ]);
+  const urlProc   = spawn(YTDLP_PATH, ['--flat-playlist', '--print', 'url',   '--no-warnings', url]);
+  const titleProc = spawn(YTDLP_PATH, ['--flat-playlist', '--print', 'title', '--no-warnings', url]);
 
   let urlOut = '', titleOut = '';
-  urlProc.stdout.on('data', d => { urlOut += d.toString(); });
+  urlProc.stdout.on('data',   d => { urlOut   += d.toString(); });
   titleProc.stdout.on('data', d => { titleOut += d.toString(); });
 
   let done = 0;
@@ -89,17 +114,7 @@ app.post('/playlist', (req, res) => {
   urlProc.on('error', () => res.status(500).json({ error: 'yt-dlp failed' }));
 });
 
-// POST /info — returns video title (used by the preview; result is cached)
-app.post('/info', async (req, res) => {
-  const { url } = req.body;
-  if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
-    return res.status(400).json({ error: 'Invalid URL' });
-  }
-  const title = await fetchTitle(url);
-  res.json({ title });
-});
-
-// POST /download — streams audio directly to the client
+// POST /download
 app.post('/download', async (req, res) => {
   const { url, format = 'aac' } = req.body;
 
@@ -108,24 +123,27 @@ app.post('/download', async (req, res) => {
   }
 
   const fmt = FORMATS[format] || FORMATS.aac;
+  const { title, uploader } = await fetchInfo(url);
 
-  const title = await fetchTitle(url);
-  const safeName = toSafeFilename(title || 'audio');
-  const filename = `${safeName}.${fmt.ext}`;
+  // Clean title: remove author prefix/suffix if present
+  const cleanedTitle = cleanTitle(title, uploader);
+  const safeName     = toSafeFilename(cleanedTitle || 'audio');
+  const filename     = `${safeName}.${fmt.ext}`;
 
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.setHeader('Content-Type', fmt.mimeType);
 
-  // Metadata flags — embed title, and map uploader name to the artist tag
-  const metaFlags = [
+  // Embed metadata: title + artist from uploader
+  // Strip " - Topic" suffix YouTube adds to auto-generated channels
+  const artistName = uploader.replace(/\s*-\s*Topic$/, '').trim();
+  const metaFlags  = [
     '--embed-metadata',
-    '--parse-metadata', 'uploader:%(artist)s',
+    '--parse-metadata', `%(uploader)s:%(artist)s`,
+    '--postprocessor-args', `ffmpeg:-metadata artist="${artistName}" -metadata title="${cleanedTitle}"`,
   ];
 
-  // M4A and AAC both need a temp file (container requires seekable output)
-  if (fmt.ext === 'm4a' || fmt.ext === 'aac') {
-    const os = require('os');
-    const fs = require('fs');
+  // AAC and M4A need a temp file; MP3 can stream directly
+  if (fmt.ext === 'aac' || fmt.ext === 'm4a') {
     const tmpFile = path.join(os.tmpdir(), `ytdl_${Date.now()}.${fmt.ext}`);
 
     const ytDlp = spawn(YTDLP_PATH, [
@@ -139,12 +157,9 @@ app.post('/download', async (req, res) => {
     ]);
 
     ytDlp.stderr.on('data', d => console.error('[yt-dlp]', d.toString()));
-
     ytDlp.on('error', err => {
-      console.error('yt-dlp error:', err.message);
       if (!res.headersSent) res.status(500).json({ error: 'yt-dlp failed to start' });
     });
-
     ytDlp.on('close', code => {
       if (code !== 0) {
         if (!res.headersSent) res.status(500).json({ error: `yt-dlp exited with code ${code}` });
@@ -156,7 +171,7 @@ app.post('/download', async (req, res) => {
     });
 
   } else {
-    // MP3 — stream stdout directly
+    // MP3 — stream stdout
     const ytDlp = spawn(YTDLP_PATH, [
       '--no-playlist', '-x',
       '--audio-format', fmt.ytdlpFmt,
@@ -169,8 +184,7 @@ app.post('/download', async (req, res) => {
 
     ytDlp.stdout.pipe(res);
     ytDlp.stderr.on('data', d => console.error('[yt-dlp]', d.toString()));
-    ytDlp.on('error', err => {
-      console.error('yt-dlp error:', err.message);
+    ytDlp.on('error', () => {
       if (!res.headersSent) res.status(500).json({ error: 'yt-dlp failed to start' });
     });
     ytDlp.on('close', code => {
