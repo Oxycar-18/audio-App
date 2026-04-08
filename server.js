@@ -31,7 +31,14 @@ function getVideoId(url) {
   } catch { return null; }
 }
 
-function fetchTitle(url) {
+// Sanitize a string for use as a filename — keeps spaces, removes only truly invalid chars
+function toSafeFilename(str) {
+  return str
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '') // remove chars illegal on Windows/Mac
+    .trim()
+    .replace(/\.+$/, '')                     // no trailing dots
+    || 'audio';
+}
   return new Promise((resolve) => {
     const id = getVideoId(url);
     if (id && titleCache.has(id)) return resolve(titleCache.get(id));
@@ -103,13 +110,17 @@ app.post('/download', async (req, res) => {
   const fmt = FORMATS[format] || FORMATS.aac;
 
   const title = await fetchTitle(url);
-  const safeName = title
-    ? title.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_')
-    : 'audio';
+  const safeName = toSafeFilename(title || 'audio');
   const filename = `${safeName}.${fmt.ext}`;
 
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.setHeader('Content-Type', fmt.mimeType);
+
+  // Metadata flags — embed title, and map uploader name to the artist tag
+  const metaFlags = [
+    '--embed-metadata',
+    '--parse-metadata', 'uploader:%(artist)s',
+  ];
 
   // M4A and AAC both need a temp file (container requires seekable output)
   if (fmt.ext === 'm4a' || fmt.ext === 'aac') {
@@ -122,6 +133,7 @@ app.post('/download', async (req, res) => {
       '--audio-format', fmt.ytdlpFmt,
       '--audio-quality', '0',
       '--ffmpeg-location', FFMPEG_PATH,
+      ...metaFlags,
       '-o', tmpFile,
       url
     ]);
@@ -144,12 +156,13 @@ app.post('/download', async (req, res) => {
     });
 
   } else {
-    // MP3 / AAC — stream stdout directly
+    // MP3 — stream stdout directly
     const ytDlp = spawn(YTDLP_PATH, [
       '--no-playlist', '-x',
       '--audio-format', fmt.ytdlpFmt,
       '--audio-quality', '0',
       '--ffmpeg-location', FFMPEG_PATH,
+      ...metaFlags,
       '-o', '-',
       url
     ]);
