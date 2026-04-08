@@ -170,18 +170,24 @@ app.post('/download', async (req, res) => {
         if (!res.headersSent) res.status(500).json({ error: `yt-dlp exited with code ${code}` });
         return;
       }
-      // Check file exists before streaming
-      if (!fs.existsSync(tmpFile)) {
+      // yt-dlp may write a different extension — find whatever it created
+      const dir  = path.dirname(tmpFile);
+      const base = path.basename(tmpBase);
+      const files = fs.readdirSync(dir).filter(f => f.startsWith(base));
+      console.log('[debug] expected:', tmpFile, '| found:', files);
+
+      const actualFile = files.length ? path.join(dir, files[0]) : null;
+      if (!actualFile) {
         if (!res.headersSent) res.status(500).json({ error: 'Output file not found after conversion' });
         return;
       }
-      const stream = fs.createReadStream(tmpFile);
+      const stream = fs.createReadStream(actualFile);
       stream.on('error', err => {
         console.error('Read stream error:', err.message);
         if (!res.headersSent) res.status(500).json({ error: 'Failed to read output file' });
       });
       stream.pipe(res);
-      stream.on('close', () => fs.unlink(tmpFile, () => {}));
+      stream.on('close', () => fs.unlink(actualFile, () => {}));
     });
 
   } else {
