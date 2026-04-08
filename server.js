@@ -111,16 +111,15 @@ app.post('/download', async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.setHeader('Content-Type', fmt.mimeType);
 
-  // M4A needs a real file (MP4 container requires seekable output)
-  // For MP3/AAC we can stream stdout directly
-  if (fmt.ext === 'm4a') {
+  // M4A and AAC both need a temp file (container requires seekable output)
+  if (fmt.ext === 'm4a' || fmt.ext === 'aac') {
     const os = require('os');
     const fs = require('fs');
-    const tmpFile = path.join(os.tmpdir(), `ytdl_${Date.now()}.m4a`);
+    const tmpFile = path.join(os.tmpdir(), `ytdl_${Date.now()}.${fmt.ext}`);
 
     const ytDlp = spawn(YTDLP_PATH, [
       '--no-playlist', '-x',
-      '--audio-format', 'm4a',
+      '--audio-format', fmt.ytdlpFmt,
       '--audio-quality', '0',
       '--ffmpeg-location', FFMPEG_PATH,
       '-o', tmpFile,
