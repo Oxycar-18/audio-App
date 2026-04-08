@@ -15,8 +15,9 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const FORMATS = {
-  mp3: { mimeType: 'audio/mpeg', ext: 'mp3' },
-  aac: { mimeType: 'audio/aac',  ext: 'aac' },
+  mp3: { mimeType: 'audio/mpeg',  ext: 'mp3' },
+  aac: { mimeType: 'audio/aac',   ext: 'aac' },
+  m4a: { mimeType: 'audio/mp4',   ext: 'm4a' },
 };
 
 // Simple in-memory title cache: videoId -> title string
@@ -117,6 +118,7 @@ app.post('/download', async (req, res) => {
     '--audio-format', fmt.ext,
     '--audio-quality', '0',
     '--ffmpeg-location', FFMPEG_PATH,
+    '--force-overwrites',
     '-o', '-',
     url
   ]);

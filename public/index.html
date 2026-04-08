@@ -445,7 +445,7 @@
     let defaultFormat = 'aac';
 
     function cycleDefaultFormat() {
-      defaultFormat = defaultFormat === 'mp3' ? 'aac' : 'mp3';
+      defaultFormat = defaultFormat === 'mp3' ? 'aac' : defaultFormat === 'aac' ? 'm4a' : 'mp3';
       document.getElementById('default-fmt-label').textContent = defaultFormat.toUpperCase();
 
       // Apply to all tabs not yet resolved (not done, not currently downloading)
@@ -527,6 +527,7 @@
           <div class="format-toggle">
             <button class="fmt-btn ${defaultFormat === 'mp3' ? 'active' : ''}" data-fmt="mp3" onclick="selectFormat(${id}, this)">MP3</button>
             <button class="fmt-btn ${defaultFormat === 'aac' ? 'active' : ''}" data-fmt="aac" onclick="selectFormat(${id}, this)">AAC</button>
+            <button class="fmt-btn ${defaultFormat === 'm4a' ? 'active' : ''}" data-fmt="m4a" onclick="selectFormat(${id}, this)">M4A</button>
           </div>
           <button class="dl-btn" id="dl-${id}" onclick="startDownload(${id})">Download</button>
         </div>
