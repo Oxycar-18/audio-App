@@ -15,9 +15,9 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const FORMATS = {
-  mp3: { mimeType: 'audio/mpeg',  ext: 'mp3' },
-  aac: { mimeType: 'audio/aac',   ext: 'aac' },
-  m4a: { mimeType: 'audio/mp4',   ext: 'm4a' },
+  mp3: { mimeType: 'audio/mpeg', ext: 'mp3', ytdlpFmt: 'mp3' },
+  aac: { mimeType: 'audio/aac',  ext: 'aac', ytdlpFmt: 'aac' },
+  m4a: { mimeType: 'audio/mp4',  ext: 'm4a', ytdlpFmt: 'aac' }, // aac codec in m4a container
 };
 
 // Simple in-memory title cache: videoId -> title string
@@ -94,15 +94,14 @@ app.post('/info', async (req, res) => {
 
 // POST /download — streams audio directly to the client
 app.post('/download', async (req, res) => {
-  const { url, format = 'mp3' } = req.body;
+  const { url, format = 'aac' } = req.body;
 
   if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
     return res.status(400).json({ error: 'Invalid YouTube URL' });
   }
 
-  const fmt = FORMATS[format] || FORMATS.mp3;
+  const fmt = FORMATS[format] || FORMATS.aac;
 
-  // Reuse cached title — no second yt-dlp spawn if /info was already called
   const title = await fetchTitle(url);
   const safeName = title
     ? title.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_')
@@ -112,29 +111,60 @@ app.post('/download', async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.setHeader('Content-Type', fmt.mimeType);
 
-  const ytDlp = spawn(YTDLP_PATH, [
-    '--no-playlist',
-    '-x',
-    '--audio-format', fmt.ext,
-    '--audio-quality', '0',
-    '--ffmpeg-location', FFMPEG_PATH,
-    '--force-overwrites',
-    '-o', '-',
-    url
-  ]);
+  // M4A needs a real file (MP4 container requires seekable output)
+  // For MP3/AAC we can stream stdout directly
+  if (fmt.ext === 'm4a') {
+    const os = require('os');
+    const fs = require('fs');
+    const tmpFile = path.join(os.tmpdir(), `ytdl_${Date.now()}.m4a`);
 
-  ytDlp.stdout.pipe(res);
+    const ytDlp = spawn(YTDLP_PATH, [
+      '--no-playlist', '-x',
+      '--audio-format', 'm4a',
+      '--audio-quality', '0',
+      '--ffmpeg-location', FFMPEG_PATH,
+      '-o', tmpFile,
+      url
+    ]);
 
-  ytDlp.stderr.on('data', (data) => { console.error('[yt-dlp]', data.toString()); });
+    ytDlp.stderr.on('data', d => console.error('[yt-dlp]', d.toString()));
 
-  ytDlp.on('error', (err) => {
-    console.error('Failed to start yt-dlp:', err.message);
-    if (!res.headersSent) res.status(500).json({ error: 'yt-dlp failed to start' });
-  });
+    ytDlp.on('error', err => {
+      console.error('yt-dlp error:', err.message);
+      if (!res.headersSent) res.status(500).json({ error: 'yt-dlp failed to start' });
+    });
 
-  ytDlp.on('close', (code) => {
-    if (code !== 0) console.error(`yt-dlp exited with code ${code}`);
-  });
+    ytDlp.on('close', code => {
+      if (code !== 0) {
+        if (!res.headersSent) res.status(500).json({ error: `yt-dlp exited with code ${code}` });
+        return;
+      }
+      const stream = fs.createReadStream(tmpFile);
+      stream.pipe(res);
+      stream.on('close', () => fs.unlink(tmpFile, () => {}));
+    });
+
+  } else {
+    // MP3 / AAC — stream stdout directly
+    const ytDlp = spawn(YTDLP_PATH, [
+      '--no-playlist', '-x',
+      '--audio-format', fmt.ytdlpFmt,
+      '--audio-quality', '0',
+      '--ffmpeg-location', FFMPEG_PATH,
+      '-o', '-',
+      url
+    ]);
+
+    ytDlp.stdout.pipe(res);
+    ytDlp.stderr.on('data', d => console.error('[yt-dlp]', d.toString()));
+    ytDlp.on('error', err => {
+      console.error('yt-dlp error:', err.message);
+      if (!res.headersSent) res.status(500).json({ error: 'yt-dlp failed to start' });
+    });
+    ytDlp.on('close', code => {
+      if (code !== 0) console.error(`yt-dlp exited with code ${code}`);
+    });
+  }
 });
 
 app.listen(PORT, () => {
