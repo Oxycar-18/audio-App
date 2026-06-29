@@ -682,8 +682,12 @@
         }
 
         const disposition = res.headers.get('Content-Disposition') || '';
-        const match = disposition.match(/filename="(.+?)"/);
-        const filename = match ? match[1] : `audio.${format}`;
+        // Try RFC 5987 encoded filename first (filename*=UTF-8''...), then fall back to filename=
+        const rfc5987 = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+        const basic   = disposition.match(/filename="(.+?)"/);
+        const filename = rfc5987
+          ? decodeURIComponent(rfc5987[1])
+          : basic ? basic[1] : `audio.${format}`;
 
         const blob = await res.blob();
         const a = document.createElement('a');

@@ -134,17 +134,12 @@ app.post('/download', async (req, res) => {
   const safeName     = toSafeFilename(cleanedTitle || 'audio');
   const filename     = `${safeName}.${fmt.ext}`;
 
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
   res.setHeader('Content-Type', fmt.mimeType);
 
-  // Embed metadata: title + artist from uploader
-  // Strip " - Topic" suffix YouTube adds to auto-generated channels
-  const artistName = uploader.replace(/\s*-\s*Topic$/, '').trim();
-  const metaFlags  = [
-    '--embed-metadata',
-    '--parse-metadata', `%(uploader)s:%(artist)s`,
-    '--postprocessor-args', `ffmpeg:-metadata artist="${artistName}" -metadata title="${cleanedTitle}"`,
-  ];
+  // Embed metadata: let yt-dlp handle it natively via --embed-metadata
+  // This correctly handles unicode/special characters without shell escaping issues
+  const metaFlags = ['--embed-metadata'];
 
   // All formats use a temp file so ffmpeg can properly encode + embed metadata
   const tmpBase = path.join(os.tmpdir(), `ytdl_${Date.now()}`);
