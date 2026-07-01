@@ -152,8 +152,10 @@ app.post('/download', async (req, res) => {
   // This correctly handles unicode/special characters without shell escaping issues
   const metaFlags = ['--embed-metadata'];
 
-  // Use the user's own temp dir (always writable) with a timestamp-only name
-  const tmpBase = path.join(os.tmpdir(), `ytdl_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+  // os.tmpdir() and %TEMP% return short-name paths on this machine (ARTHUR~1.BIG)
+  // Use USERPROFILE to build a reliable full-length temp path
+  const tempDir = path.join(process.env.USERPROFILE || os.homedir(), 'AppData', 'Local', 'Temp');
+  const tmpBase = path.join(tempDir, `ytdl_${Date.now()}_${Math.random().toString(36).slice(2)}`);
   const tmpFile = `${tmpBase}.${fmt.ext}`;
 
   const ytDlp = spawn(YTDLP_PATH, [
