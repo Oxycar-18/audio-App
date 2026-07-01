@@ -152,8 +152,8 @@ app.post('/download', async (req, res) => {
   // This correctly handles unicode/special characters without shell escaping issues
   const metaFlags = ['--embed-metadata'];
 
-  // Use an explicit ASCII-only temp path to avoid encoding issues on Windows
-  const tmpBase = path.join('C:\\Windows\\Temp', `ytdl_${Date.now()}`);
+  // Use the user's own temp dir (always writable) with a timestamp-only name
+  const tmpBase = path.join(os.tmpdir(), `ytdl_${Date.now()}_${Math.random().toString(36).slice(2)}`);
   const tmpFile = `${tmpBase}.${fmt.ext}`;
 
   const ytDlp = spawn(YTDLP_PATH, [
