@@ -142,7 +142,10 @@ app.post('/download', async (req, res) => {
   const filename     = `${safeName}.${fmt.ext}`;
   console.log(`[download] filename="${filename}"`);
 
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+  // HTTP headers can't contain raw non-ASCII chars — strip them for the basic
+  // filename= fallback, and use RFC 5987 encoding for the full unicode name
+  const asciiFilename = filename.replace(/[^\x00-\x7F]/g, '_');
+  res.setHeader('Content-Disposition', `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
   res.setHeader('Content-Type', fmt.mimeType);
 
   // Embed metadata: let yt-dlp handle it natively via --embed-metadata
